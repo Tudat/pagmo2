@@ -630,7 +630,7 @@ PAGMO_REGISTER_ALGORITHM(pagmo::cmaes)
 
 #else // PAGMO_WITH_EIGEN3
 
-#error The cmaes.hpp header was included, but pagmo was not compiled with eigen3 support
+//#error The cmaes.hpp header was included, but pagmo was not compiled with eigen3 support
 
 #endif // PAGMO_WITH_EIGEN3
 

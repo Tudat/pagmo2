@@ -737,7 +737,7 @@ inline void nlopt_eq_c_wrapper(unsigned m, double *result, unsigned dim, const d
  */
 // TODO:
 // - investigate the use of a fitness cache, after we have good perf testing in place.
-class nlopt : public not_population_based
+class   nlopt : public not_population_based
 {
     using nlopt_obj = detail::nlopt_obj;
     using nlopt_data = detail::nlopt_data<>;

@@ -6,6 +6,18 @@ endif()
 find_path(NLOPT_INCLUDE_DIR NAMES nlopt.h)
 find_library(NLOPT_LIBRARY NAMES nlopt)
 
+
+#find_path(NLOPT_INCLUDE_DIR NAMES nlopt.h
+#    PATHS
+#        ${PROJECT_SOURCE_DIR}/../nlopt/src/api)
+##find_library(NLOPT_LIBRARY NAMES nlopt)
+
+#set(NLOPT_LIBRARIES_DIR ${NLOPT_INCLUDE_DIR}/../../lib)
+
+#find_library(NLOPT_LIBRARY
+#      NAMES libnlopt.a libnlopt.lib nlopt.a nlopt.lib
+#      PATHS ${NLOPT_LIBRARIES_DIR})
+
 include(FindPackageHandleStandardArgs)
 
 find_package_handle_standard_args(NLOPT DEFAULT_MSG NLOPT_INCLUDE_DIR NLOPT_LIBRARY)

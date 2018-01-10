@@ -1,8 +1,8 @@
-# This version of pagmo2 CMakeLists.txt was modified by 
-# F. Lupi (github.com/lupif) 
+# This version of pagmo2 CMakeLists.txt was modified by
+# F. Lupi (github.com/lupif)
 # on
 # 13/07/2017 at 12:00 pm
-# As part of tudatBundle project 
+# As part of tudatBundle project
 #
 # changed the name of CMAKE_SOURCE_DIR to CMAKE_CURRENT_SOURCE_DIR
 
@@ -93,10 +93,10 @@ if(YACMA_COMPILER_IS_INTELXX)
   list(APPEND PAGMO_CXX_FLAGS_RELEASE "-diag-disable" "2259,1682,68")
 endif()
 if(MINGW)
-	# Flag needed to deal with big binaries in MinGW.
-	message(STATUS "Enabling the '-Wa,-mbig-obj' flag in MinGW builds.")
-	list(APPEND PAGMO_CXX_FLAGS_DEBUG "-Wa,-mbig-obj")
-	list(APPEND PAGMO_CXX_FLAGS_RELEASE "-Wa,-mbig-obj")
+        # Flag needed to deal with big binaries in MinGW.
+        message(STATUS "Enabling the '-Wa,-mbig-obj' flag in MinGW builds.")
+        list(APPEND PAGMO_CXX_FLAGS_DEBUG "-Wa,-mbig-obj")
+        list(APPEND PAGMO_CXX_FLAGS_RELEASE "-Wa,-mbig-obj")
 endif()
 
 if(PAGMO_BUILD_PAGMO)
@@ -105,7 +105,6 @@ if(PAGMO_BUILD_PAGMO)
     # Eigen3
     if(PAGMO_WITH_EIGEN3)
         find_package(Eigen3 REQUIRED)
-        include_directories(SYSTEM AFTER "${EIGEN3_INCLUDE_DIR}")
         message(STATUS "Eigen include directory: ${EIGEN3_INCLUDE_DIR}")
         message(STATUS "Eigen version detected: ${EIGEN3_VERSION}")
     endif()
@@ -157,7 +156,7 @@ if(PAGMO_BUILD_PAGMO)
 
     if(PAGMO_WITH_EIGEN3)
         # Link pagmo to eigen3.
-        #target_link_libraries(pagmo INTERFACE Eigen3::eigen3)
+        # target_link_libraries(pagmo INTERFACE Eigen3::eigen3)
         set(PAGMO_ENABLE_EIGEN3 "#define PAGMO_WITH_EIGEN3")
     endif()
 
@@ -202,7 +201,7 @@ if(PAGMO_BUILD_PYGMO)
         if(MINGW)
             configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tools/mingw_wheel_libs_python${PYTHON_VERSION_MAJOR}.txt" "${CMAKE_CURRENT_BINARY_DIR}/wheel/mingw_wheel_libs_python${PYTHON_VERSION_MAJOR}.txt" @ONLY)
         endif()
-	endif()
+        endif()
 endif()
 
 # Library installation.
