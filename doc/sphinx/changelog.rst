@@ -1,6 +1,22 @@
 Changelog
 =========
 
+2.7 (unreleased)
+----------------
+
+New
+~~~
+
+- Implement the exponential natural evolution strategies (xNES) algorithm (`#142 <https://github.com/esa/pagmo2/pull/142>`__).
+
+- Implement the improved harmony search (IHS) algorithm (`#141 <https://github.com/esa/pagmo2/pull/141>`__).
+
+Changes
+~~~~~~~
+
+- Update pygmo's dependencies in the manylinux builds to the latest versions
+  (`#144 <https://github.com/esa/pagmo2/pull/144>`__).
+
 2.6 (2017-11-18)
 ----------------
 
@@ -69,8 +85,8 @@ Changes
 Fix
 ~~~
 
-- Various documentation fixes and improvements (`#103 <https://github.com/esa/pagmo2/issues/103>`__,
-  `#104 <https://github.com/esa/pagmo2/issues/104>`__, `#107 <https://github.com/esa/pagmo2/issues/107>`__).
+- Various documentation fixes and improvements (`#103 <https://github.com/esa/pagmo2/pull/103>`__,
+  `#104 <https://github.com/esa/pagmo2/pull/104>`__, `#107 <https://github.com/esa/pagmo2/pull/107>`__).
 
 2.2 (2017-05-12)
 ----------------
