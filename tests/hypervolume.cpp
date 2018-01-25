@@ -648,7 +648,9 @@ BOOST_AUTO_TEST_CASE(hypervolume_test_instances)
     std::string line;
 
     // root directory of the hypervolume data
-    std::string input_data_dir("./hypervolume_test_data/");
+    std::string filePath_( __FILE__ );
+    std::string input_data_dir( filePath_.substr( 0, filePath_.length( ) - std::string( "hypervolume.cpp" ).length( ) ) +
+                                "hypervolume_test_data/");
 
     // root directory of the testcases
     std::string input_data_testcases_dir(input_data_dir + "testcases/");
