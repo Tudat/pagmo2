@@ -1,4 +1,4 @@
-/* Copyright 2017 PaGMO development team
+/* Copyright 2017-2018 PaGMO development team
 
 This file is part of the PaGMO library.
 
@@ -33,9 +33,6 @@ see https://www.gnu.org/licenses/. */
 
 #if defined(PAGMO_WITH_EIGEN3)
 
-#include <Eigen/Dense>
-#include <unsupported/Eigen/MatrixFunctions>
-
 #include <iomanip>
 #include <random>
 #include <string>
@@ -43,6 +40,7 @@ see https://www.gnu.org/licenses/. */
 
 #include <pagmo/algorithm.hpp>
 #include <pagmo/detail/custom_comparisons.hpp>
+#include <pagmo/detail/eigen.hpp>
 #include <pagmo/exceptions.hpp>
 #include <pagmo/io.hpp>
 #include <pagmo/population.hpp>
@@ -510,7 +508,7 @@ public:
         if (m_sigma0 == -1) {
             stream(ss, "auto");
         } else {
-            stream(ss, m_eta_b);
+            stream(ss, m_sigma0);
         }
         stream(ss, "\n\tStopping xtol: ", m_xtol);
         stream(ss, "\n\tStopping ftol: ", m_ftol);

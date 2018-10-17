@@ -1,4 +1,4 @@
-/* Copyright 2017 PaGMO development team
+/* Copyright 2017-2018 PaGMO development team
 
 This file is part of the PaGMO library.
 
@@ -39,6 +39,12 @@ see https://www.gnu.org/licenses/. */
 #include <pagmo/exceptions.hpp>
 #include <pagmo/problem.hpp> // needed for cereal registration macro
 #include <pagmo/types.hpp>
+
+// Let's disable a few compiler warnings emitted by the cec2006 code.
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 
 namespace pagmo
 {
@@ -1178,5 +1184,9 @@ const std::vector<typename cec2006_statics<T>::func_ptr> cec2006_statics<T>::m_c
 } // namespace pagmo
 
 PAGMO_REGISTER_PROBLEM(pagmo::cec2006)
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 #endif

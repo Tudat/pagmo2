@@ -1,11 +1,88 @@
 Changelog
 =========
 
-2.7 (unreleased)
+2.9 (2018-08-31)
 ----------------
 
 New
 ~~~
+
+- Implement the UDI extraction functionality for :cpp:class:`~pagmo::island` (`#207 <https://github.com/esa/pagmo2/pull/207>`__).
+
+- Implement the :cpp:class:`~pagmo::fork_island` UDI (`#205 <https://github.com/esa/pagmo2/pull/205>`__).
+
+- pip pygmo package for Python 3.7 (Linux) (`#196 <https://github.com/esa/pagmo2/pull/196>`__).
+
+- Implement the :class:`~pygmo.decorator_problem` Python meta-problem (`#195 <https://github.com/esa/pagmo2/pull/195>`__).
+
+- Various documentation additions (`#194 <https://github.com/esa/pagmo2/pull/194>`__).
+
+Changes
+~~~~~~~
+
+- The build system now respects the ``CMAKE_CXX_STANDARD`` CMake setting (`#207 <https://github.com/esa/pagmo2/pull/207>`__).
+
+- Ensure that, in :cpp:class:`~pagmo::thread_island`, the algorithm used for the evolution replaces the original algorithm
+  at the end of the evolution (`#203 <https://github.com/esa/pagmo2/pull/203>`__).
+
+- The pip pygmo package for Python 3.4 (Linux) has been dropped (`#196 <https://github.com/esa/pagmo2/pull/196>`__).
+
+Fix
+~~~
+
+- Fix a missing ``inline`` specifier (`#206 <https://github.com/esa/pagmo2/pull/206>`__).
+
+- Fix a bunch of missing includes in ``pagmo.hpp`` (`#202 <https://github.com/esa/pagmo2/pull/202>`__).
+
+- Fixes for compiler warnings in GCC 8 (`#197 <https://github.com/esa/pagmo2/pull/197>`__).
+
+- Various documentation, build system and CI fixes and enhancements (`#195 <https://github.com/esa/pagmo2/pull/195>`__,
+  `#196 <https://github.com/esa/pagmo2/pull/196>`__, `#204 <https://github.com/esa/pagmo2/pull/204>`__,
+  `#205 <https://github.com/esa/pagmo2/pull/205>`__, `#207 <https://github.com/esa/pagmo2/pull/207>`__).
+
+2.8 (2018-07-12)
+----------------
+
+New
+~~~
+
+- Implement the CEC2014 problem suite (`#188 <https://github.com/esa/pagmo2/pull/188>`__, `#189 <https://github.com/esa/pagmo2/pull/189>`__).
+
+- It is now possible to explicitly shut down the process pool of :class:`~pygmo.mp_island` (`#187 <https://github.com/esa/pagmo2/pull/187>`__).
+
+- Start using intersphinx in the documentation (used at the moment for hyperlinking to the Python online documentation)
+  (`#187 <https://github.com/esa/pagmo2/pull/187>`__).
+
+- The constraints' tolerances for a problem can now be set via a scalar in pygmo (`#185 <https://github.com/esa/pagmo2/pull/185>`__).
+
+Changes
+~~~~~~~
+
+- Update the copyright date to 2018 (`#190 <https://github.com/esa/pagmo2/pull/190>`__).
+
+- **BREAKING**: user-defined islands in Python must now return the algorithm object used for the evolution in addition
+  to the evolved population (`#186 <https://github.com/esa/pagmo2/pull/186>`__). This change ensures that the state of
+  an algorithm executed on a pythonic island is now correctly propagated back to the original algorithm object at the end of
+  an evolution.
+
+Fix
+~~~
+
+- Fix a compilation failure involving the IHS algorithm (`#192 <https://github.com/esa/pagmo2/pull/192>`__).
+
+- Fix a bug in the Python exposition of the DE algorithm (`#183 <https://github.com/esa/pagmo2/pull/183>`__).
+
+- Various documentation and CI fixes and improvements (`#183 <https://github.com/esa/pagmo2/pull/183>`__,
+  `#185 <https://github.com/esa/pagmo2/pull/185>`__, `#190 <https://github.com/esa/pagmo2/pull/190>`__,
+  `#191 <https://github.com/esa/pagmo2/pull/191>`__).
+
+2.7 (2018-04-13)
+----------------
+
+New
+~~~
+
+- Implement the particle swarm optimization generational (GPSO) algorithm (`#161 <https://github.com/esa/pagmo2/pull/161>`__).
 
 - Implement the exponential natural evolution strategies (xNES) algorithm (`#142 <https://github.com/esa/pagmo2/pull/142>`__).
 

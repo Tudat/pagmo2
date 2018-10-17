@@ -37,6 +37,7 @@ Implemented algorithms
   algorithms/nlopt
   algorithms/nsga2
   algorithms/pso
+  algorithms/pso_gen
   algorithms/sade
   algorithms/sea
   algorithms/sga
@@ -67,6 +68,7 @@ Implemented problems
   problems/cec2006
   problems/cec2009
   problems/cec2013
+  problems/cec2014
   problems/unconstrain
 
 Implemented islands
@@ -76,6 +78,7 @@ Implemented islands
   :maxdepth: 1
 
   islands/thread_island
+  islands/fork_island
 
 Utilities
 ^^^^^^^^^

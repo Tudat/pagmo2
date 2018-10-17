@@ -1,4 +1,4 @@
-/* Copyright 2017 PaGMO development team
+/* Copyright 2017-2018 PaGMO development team
 
 This file is part of the PaGMO library.
 
@@ -33,7 +33,6 @@ see https://www.gnu.org/licenses/. */
 
 #if defined(PAGMO_WITH_EIGEN3)
 
-#include <Eigen/Dense>
 #include <iomanip>
 #include <random>
 #include <string>
@@ -41,6 +40,7 @@ see https://www.gnu.org/licenses/. */
 
 #include <pagmo/algorithm.hpp>
 #include <pagmo/detail/custom_comparisons.hpp>
+#include <pagmo/detail/eigen.hpp>
 #include <pagmo/exceptions.hpp>
 #include <pagmo/io.hpp>
 #include <pagmo/population.hpp>
@@ -270,7 +270,7 @@ public:
 
         // If the algorithm is called for the first time on this problem dimension / pop size or if m_memory is false we
         // erease the memory of past calls
-        if ((newpop.size() != lam) || ((unsigned int)newpop[0].rows() != dim) || (m_memory == false)) {
+        if ((newpop.size() != lam) || (static_cast<unsigned int>(newpop[0].rows()) != dim) || (m_memory == false)) {
             sigma = m_sigma0;
             mean.resize(_(dim));
             auto idx_b = pop.best_idx();

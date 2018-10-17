@@ -1,4 +1,4 @@
-/* Copyright 2017 PaGMO development team
+/* Copyright 2017-2018 PaGMO development team
 
 This file is part of the PaGMO library.
 
@@ -46,6 +46,12 @@ see https://www.gnu.org/licenses/. */
 #include <pagmo/types.hpp>
 #include <pagmo/utils/constrained.hpp>
 #include <pagmo/utils/generic.hpp>
+
+// MINGW-specific warnings.
+#if defined(__GNUC__) && defined(__MINGW32__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-attribute=pure"
+#endif
 
 namespace pagmo
 {
@@ -96,9 +102,7 @@ public:
      *
      * @throws unspecified any exception thrown by the constructor from problem.
      */
-    population() : population(null_problem{}, 0u, 0u)
-    {
-    }
+    population() : population(null_problem{}, 0u, 0u) {}
 
     /// Constructor from a problem.
     /**
@@ -233,14 +237,14 @@ public:
     {
         // Checks on the input vectors.
         if (x.size() != m_prob.get_nx()) {
-            pagmo_throw(std::invalid_argument, "Trying to add a decision vector of dimension: "
-                                                   + std::to_string(x.size()) + ", while the problem's dimension is: "
-                                                   + std::to_string(m_prob.get_nx()));
+            pagmo_throw(std::invalid_argument,
+                        "Trying to add a decision vector of dimension: " + std::to_string(x.size())
+                            + ", while the problem's dimension is: " + std::to_string(m_prob.get_nx()));
         }
         if (f.size() != m_prob.get_nf()) {
-            pagmo_throw(std::invalid_argument, "Trying to add a fitness of dimension: " + std::to_string(f.size())
-                                                   + ", while the problem's fitness has dimension: "
-                                                   + std::to_string(m_prob.get_nf()));
+            pagmo_throw(std::invalid_argument,
+                        "Trying to add a fitness of dimension: " + std::to_string(f.size())
+                            + ", while the problem's fitness has dimension: " + std::to_string(m_prob.get_nf()));
         }
 
         // Prepare quantities to be appended to the internal vectors.
@@ -359,10 +363,10 @@ public:
      * a worst individual is not well defined, or if the population is empty.
      * @throws unspecified any exception thrown by pagmo::sort_population_con().
      */
-     size_type worst_idx() const
-     {
-         return worst_idx(get_problem().get_c_tol());
-     }
+    size_type worst_idx() const
+    {
+        return worst_idx(get_problem().get_c_tol());
+    }
 
     /// Index of the worst individual (accounting for a vector tolerance)
     /**
@@ -434,6 +438,10 @@ public:
             pagmo_throw(std::invalid_argument,
                         "The Champion of a population can only be extracted in single objective problems");
         }
+        if (m_prob.is_stochastic()) {
+            pagmo_throw(std::invalid_argument,
+                        "The Champion of a population can only be extracted for non stochastic problems");
+        }
         return m_champion_x;
     }
 
@@ -457,6 +465,10 @@ public:
         if (m_prob.get_nobj() > 1u) {
             pagmo_throw(std::invalid_argument,
                         "The Champion of a population can only be extracted in single objective problems");
+        }
+        if (m_prob.is_stochastic()) {
+            pagmo_throw(std::invalid_argument,
+                        "The Champion of a population can only be extracted for non stochastic problems");
         }
         return m_champion_f;
     }
@@ -501,14 +513,14 @@ public:
                                                    + ", while population has size: " + std::to_string(size()));
         }
         if (f.size() != m_prob.get_nf()) {
-            pagmo_throw(std::invalid_argument, "Trying to set a fitness of dimension: " + std::to_string(f.size())
-                                                   + ", while the problem's fitness has dimension: "
-                                                   + std::to_string(m_prob.get_nf()));
+            pagmo_throw(std::invalid_argument,
+                        "Trying to set a fitness of dimension: " + std::to_string(f.size())
+                            + ", while the problem's fitness has dimension: " + std::to_string(m_prob.get_nf()));
         }
         if (x.size() != m_prob.get_nx()) {
-            pagmo_throw(std::invalid_argument, "Trying to set a decision vector of dimension: "
-                                                   + std::to_string(x.size()) + ", while the problem's dimension is: "
-                                                   + std::to_string(m_prob.get_nx()));
+            pagmo_throw(std::invalid_argument,
+                        "Trying to set a decision vector of dimension: " + std::to_string(x.size())
+                            + ", while the problem's dimension is: " + std::to_string(m_prob.get_nx()));
         }
 
         // Reserve space for the incoming vectors. If any of this throws,
@@ -629,7 +641,7 @@ public:
             stream(os, "\tDecision vector:\t", p.m_x[i], '\n');
             stream(os, "\tFitness vector:\t\t", p.m_f[i], '\n');
         }
-        if (p.get_problem().get_nobj() == 1u) {
+        if (p.get_problem().get_nobj() == 1u && !p.get_problem().is_stochastic()) {
             stream(os, "\nChampion decision vector: ", p.champion_x(), '\n');
             stream(os, "Champion fitness: ", p.champion_f(), '\n');
         }
@@ -710,5 +722,9 @@ private:
 };
 
 } // namespace pagmo
+
+#if defined(__GNUC__) && defined(__MINGW32__)
+#pragma GCC diagnostic pop
+#endif
 
 #endif

@@ -1,4 +1,4 @@
-/* Copyright 2017 PaGMO development team
+/* Copyright 2017-2018 PaGMO development team
 
 This file is part of the PaGMO library.
 
@@ -42,6 +42,8 @@ see https://www.gnu.org/licenses/. */
 
 #include <pagmo/algorithm.hpp>
 #include <pagmo/algorithms/ipopt.hpp>
+#include <pagmo/config.hpp>
+#include <pagmo/island.hpp>
 #include <pagmo/problem.hpp>
 #include <pagmo/problems/hock_schittkowsky_71.hpp>
 #include <pagmo/problems/luksan_vlcek1.hpp>
@@ -51,6 +53,12 @@ see https://www.gnu.org/licenses/. */
 #include <pagmo/serialization.hpp>
 #include <pagmo/threading.hpp>
 #include <pagmo/types.hpp>
+
+#if defined(PAGMO_WITH_FORK_ISLAND)
+#include <pagmo/islands/fork_island.hpp>
+#else
+#include <pagmo/islands/thread_island.hpp>
+#endif
 
 using namespace pagmo;
 
@@ -83,8 +91,9 @@ BOOST_AUTO_TEST_CASE(ipopt_nlp_test)
     BOOST_CHECK((lb == vector_double{1., 1., 1., 1.}));
     BOOST_CHECK((ub == vector_double{5., 5., 5., 5.}));
     BOOST_CHECK(
-        (c_lb == vector_double{0., std::numeric_limits<double>::has_infinity ? -std::numeric_limits<double>::infinity()
-                                                                             : std::numeric_limits<double>::lowest()}));
+        (c_lb
+         == vector_double{0., std::numeric_limits<double>::has_infinity ? -std::numeric_limits<double>::infinity()
+                                                                        : std::numeric_limits<double>::lowest()}));
     BOOST_CHECK((c_ub == vector_double{0., 0.}));
 
     // Initial guess.
@@ -411,8 +420,9 @@ BOOST_AUTO_TEST_CASE(ipopt_options)
     // String.
     ip.set_string_option("bart", "simpson");
     ip.set_string_options({{"homer", "simpson"}, {"marge", "simpson"}});
-    BOOST_CHECK((ip.get_string_options() == std::map<std::string, std::string>{
-                                                {"bart", "simpson"}, {"homer", "simpson"}, {"marge", "simpson"}}));
+    BOOST_CHECK(
+        (ip.get_string_options()
+         == std::map<std::string, std::string>{{"bart", "simpson"}, {"homer", "simpson"}, {"marge", "simpson"}}));
     ip.reset_string_options();
     BOOST_CHECK(ip.get_string_options().empty());
     // Integer.
@@ -433,4 +443,10 @@ BOOST_AUTO_TEST_CASE(ipopt_options)
 BOOST_AUTO_TEST_CASE(ipopt_thread_safety)
 {
     BOOST_CHECK(algorithm(ipopt{}).get_thread_safety() == thread_safety::none);
+    // Check the island selection type.
+#if defined(PAGMO_WITH_FORK_ISLAND)
+    BOOST_CHECK((island{ipopt{}, luksan_vlcek1{4}, 10}.is<fork_island>()));
+#else
+    BOOST_CHECK((island{ipopt{}, luksan_vlcek1{4}, 10}.is<thread_island>()));
+#endif
 }

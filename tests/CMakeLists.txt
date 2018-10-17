@@ -13,7 +13,10 @@ function(ADD_PAGMO_TESTCASE arg1)
     add_executable(${arg1} ${arg1}.cpp)
     target_link_libraries(${arg1} pagmo)
     target_compile_options(${arg1} PRIVATE "$<$<CONFIG:DEBUG>:${PAGMO_CXX_FLAGS_DEBUG}>" "$<$<CONFIG:RELEASE>:${PAGMO_CXX_FLAGS_RELEASE}>")
-    set_property(TARGET ${arg1} PROPERTY CXX_STANDARD 11)
+    # Let's setup the target C++ standard, but only if the user did not provide it manually.
+    if(NOT CMAKE_CXX_STANDARD)
+        set_property(TARGET ${arg1} PROPERTY CXX_STANDARD 11)
+    endif()
     set_property(TARGET ${arg1} PROPERTY CXX_STANDARD_REQUIRED YES)
     set_property(TARGET ${arg1} PROPERTY CXX_EXTENSIONS NO)
     add_test(${arg1} ${arg1})
@@ -56,6 +59,7 @@ ADD_PAGMO_TESTCASE(population)
 ADD_PAGMO_TESTCASE(problem)
 ADD_PAGMO_TESTCASE(problem_type_traits)
 ADD_PAGMO_TESTCASE(pso)
+ADD_PAGMO_TESTCASE(pso_gen)
 ADD_PAGMO_TESTCASE(rastrigin)
 ADD_PAGMO_TESTCASE(rng)
 ADD_PAGMO_TESTCASE(rng_serialization)
@@ -84,11 +88,14 @@ if(PAGMO_WITH_IPOPT)
     ADD_PAGMO_TESTCASE(ipopt)
 endif()
 
-# Here are problematic tests.
+# Here are problematic tests. See config.hpp for an explanation.
 if(NOT YACMA_COMPILER_IS_MSVC AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    # This test compiles but MSVC seems to have troubles in
-    # dealing with the cec2013_data.hpp .... resulting in a segfault of the test on the CI (Feb. 2017)
-    # To be tried again when they update the compiler?
-    # NOTE: it also slows down a lot the CI on OSX.
     ADD_PAGMO_TESTCASE(cec2013)
+    ADD_PAGMO_TESTCASE(cec2014)
+endif()
+
+if (PAGMO_WITH_FORK_ISLAND)
+    ADD_PAGMO_TESTCASE(fork_island)
+    # Set the _POSIX_C_SOURCE defintion to something reasonably modern.
+    target_compile_definitions(fork_island PRIVATE _POSIX_C_SOURCE=200112L)
 endif()

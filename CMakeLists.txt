@@ -12,8 +12,6 @@ cmake_minimum_required(VERSION 3.2)
 # Module path setup.
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules" "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/yacma")
 
-message(STATUS "System name: ${CMAKE_SYSTEM_NAME}")
-
 # Set default build type to "Release".
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING
@@ -36,12 +34,13 @@ if((NOT PAGMO_BUILD_PAGMO) AND (NOT PAGMO_BUILD_PYGMO))
 endif()
 
 # Main pagmo/pygmo project version.
+set(PAGMO_PROJECT_VERSION 2.9)
 
-set(PAGMO_PROJECT_VERSION 2.7)
 
 if(PAGMO_BUILD_PAGMO)
     # Initial setup of a pagmo build.
-    project(pagmo VERSION ${PAGMO_PROJECT_VERSION})
+    project(pagmo VERSION ${PAGMO_PROJECT_VERSION} LANGUAGES CXX C)
+    message(STATUS "System name: ${CMAKE_SYSTEM_NAME}")
     enable_testing()
 
     # Build option: enable test set.
@@ -58,9 +57,29 @@ if(PAGMO_BUILD_PAGMO)
 
     # Build option: enable Ipopt.
     option(PAGMO_WITH_IPOPT "Enable wrappers for the Ipopt solver." OFF)
+
+    # Detect if we can enable the fork_island UDI.
+    include(CheckIncludeFileCXX)
+    include(CheckCXXSymbolExists)
+    include(CMakePushCheckState)
+    CHECK_INCLUDE_FILE_CXX("sys/types.h" PAGMO_HAVE_SYS_TYPES_H)
+    CHECK_INCLUDE_FILE_CXX("unistd.h" PAGMO_HAVE_UNISTD_H)
+    cmake_push_check_state(RESET)
+    set(CMAKE_REQUIRED_DEFINITIONS -D_POSIX_C_SOURCE=1)
+    CHECK_CXX_SYMBOL_EXISTS(fork "unistd.h;sys/types.h" PAGMO_HAVE_FORK_SYSCALL)
+    cmake_pop_check_state()
+    if(PAGMO_HAVE_SYS_TYPES_H AND PAGMO_HAVE_UNISTD_H AND PAGMO_HAVE_FORK_SYSCALL)
+        message(STATUS "The fork_island UDI will be available.")
+        set(PAGMO_WITH_FORK_ISLAND YES)
+        set(PAGMO_ENABLE_FORK_ISLAND "#define PAGMO_WITH_FORK_ISLAND")
+    else()
+        message(STATUS "The fork_island UDI will NOT be available.")
+        set(PAGMO_WITH_FORK_ISLAND NO)
+    endif()
 else()
     # Initial setup of a pygmo build.
-    project(pygmo VERSION ${PAGMO_PROJECT_VERSION})
+    project(pygmo VERSION ${PAGMO_PROJECT_VERSION} LANGUAGES CXX C)
+    message(STATUS "System name: ${CMAKE_SYSTEM_NAME}")
 endif()
 
 # Common general bits.

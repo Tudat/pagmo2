@@ -1,4 +1,4 @@
-/* Copyright 2017 PaGMO development team
+/* Copyright 2017-2018 PaGMO development team
 
 This file is part of the PaGMO library.
 
@@ -29,13 +29,62 @@ see https://www.gnu.org/licenses/. */
 #ifndef PAGMO_SERIALIZATION_HPP
 #define PAGMO_SERIALIZATION_HPP
 
+// Let's disable a few compiler warnings emitted by the cereal code.
 #if defined(__clang__) || defined(__GNUC__)
 #pragma GCC diagnostic push
+// NOTE: these warnings are available on all the supported versions
+// of GCC/clang, no need to put version checks.
 #pragma GCC diagnostic ignored "-Wconversion"
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 #pragma GCC diagnostic ignored "-Wdeprecated"
+// MINGW-specific warnings.
+#if defined(__MINGW32__)
+#pragma GCC diagnostic ignored "-Wsuggest-attribute=pure"
+#endif
 #if __GNUC__ >= 7
 #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#endif
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#pragma GCC diagnostic ignored "-Wnoexcept"
+#pragma GCC diagnostic ignored "-Wcast-align"
+#endif
+#if defined(__clang__)
+
+#if defined(__apple_build_version__)
+
+// LLVM 3.2 -> Xcode 4.6.
+#if __clang_major__ > 4 || (__clang_major__ == 4 && __clang_minor__ >= 6)
+
+#pragma GCC diagnostic ignored "-Wunused-private-field"
+
+#endif
+
+// LLVM 3.7 -> Xcode 7.0.
+#if __clang_major__ >= 7
+
+#pragma GCC diagnostic ignored "-Wexceptions"
+
+#endif
+
+#else
+
+// LLVM 3.2.
+#if __clang_major__ > 3 || (__clang_major__ == 3 && __clang_minor__ >= 2)
+
+#pragma GCC diagnostic ignored "-Wunused-private-field"
+
+#endif
+
+// LLVM 3.7.
+#if __clang_major__ > 3 || (__clang_major__ == 3 && __clang_minor__ >= 7)
+
+#pragma GCC diagnostic ignored "-Wexceptions"
+
+#endif
+
+#endif
+
 #endif
 #endif
 
@@ -70,8 +119,9 @@ see https://www.gnu.org/licenses/. */
 #include <random>
 #include <sstream>
 #include <string>
+
 #if defined(PAGMO_WITH_EIGEN3)
-#include <Eigen/Dense>
+#include <pagmo/detail/eigen.hpp>
 #endif
 
 namespace cereal
@@ -137,6 +187,6 @@ inline void CEREAL_LOAD_FUNCTION_NAME(Archive &ar, Eigen::Matrix<S, R, C, O, MR,
     }
 }
 #endif
-}
+} // namespace cereal
 
 #endif

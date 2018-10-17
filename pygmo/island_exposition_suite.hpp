@@ -1,4 +1,4 @@
-/* Copyright 2017 PaGMO development team
+/* Copyright 2017-2018 PaGMO development team
 
 This file is part of the PaGMO library.
 
@@ -35,6 +35,7 @@ see https://www.gnu.org/licenses/. */
 #include <boost/python/extract.hpp>
 #include <boost/python/import.hpp>
 #include <boost/python/init.hpp>
+#include <boost/python/return_internal_reference.hpp>
 #include <cstdint>
 #include <memory>
 
@@ -66,8 +67,11 @@ inline bp::class_<Isl> expose_island(const char *name, const char *descr)
     // Expose the island constructor from Isl.
     isl.def(bp::init<const Isl &, const pagmo::algorithm &, const pagmo::population &>());
 
+    // Expose extract.
+    isl.def("_cpp_extract", &generic_cpp_extract<pagmo::island, Isl>, bp::return_internal_reference<>());
+
     return c;
 }
-}
+} // namespace pygmo
 
 #endif

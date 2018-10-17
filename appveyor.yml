@@ -2,13 +2,13 @@ environment:
   TWINE_PASSWORD:
     secure: fqy2DKVE2zM+97vNPB8xgw3ae3SDPkL/T8RvC6s4ncY=
   matrix:
+    - BUILD_TYPE: "MSVC_64_Debug"
+      COMPILER: MSVC15
+      PLATFORM: "x64"
     - BUILD_TYPE: "MSVC_64_Python35"
       COMPILER: MSVC15
       PLATFORM: "x64"
     - BUILD_TYPE: "MSVC_64_Python36"
-      COMPILER: MSVC15
-      PLATFORM: "x64"
-    - BUILD_TYPE: "MSVC_64_Debug"
       COMPILER: MSVC15
       PLATFORM: "x64"
     - BUILD_TYPE: "MinGW_64_Debug"
@@ -22,34 +22,31 @@ install:
 - if [%BUILD_TYPE%]==[MSVC_64_Debug] set PATH=C:\Miniconda36-x64\Scripts;%PATH%
 - if [%BUILD_TYPE%]==[MSVC_64_Debug] conda config --add channels conda-forge --force
 # NOTE: we clean and update the conda env due to some apparent caching issues in the
-# conda version installed on appveyor.
-- if [%BUILD_TYPE%]==[MSVC_64_Debug] conda clean --all -y
-- if [%BUILD_TYPE%]==[MSVC_64_Debug] conda update conda -y
+# conda version installed on appveyor. This is necessary sometimes, depending on the
+# current state of conda.
+# - if [%BUILD_TYPE%]==[MSVC_64_Debug] conda clean --all -y
+# - if [%BUILD_TYPE%]==[MSVC_64_Debug] conda update conda -y
 - if [%BUILD_TYPE%]==[MSVC_64_Debug] conda update --all -y
-# NOTE: here we are pinning the boost and boost-cpp packages versions to the current
-# pinned conda-forge versions, which can be found out at:
-# https://github.com/conda-forge/conda-forge.github.io/blob/master/scripts/pin_the_slow_way.py
-# This ensures that we build with the same boost version we use to build the conda packages.
-# NOTE: these version numbers need to be updated manually.
-- if [%BUILD_TYPE%]==[MSVC_64_Debug] conda create -y --name pagmo python=3.6 cmake boost=1.65.1 boost-cpp=1.65.1 eigen nlopt
+# NOTE: we are installing some extra packages here (the same as in the python builds, even though we don't
+# use Python here), because otherwise there's some error arising when trying to detect the nlopt installation.
+# Not clear why that's the case, hopefully it's temporary.
+- if [%BUILD_TYPE%]==[MSVC_64_Debug] conda create -y --name pagmo python=3.6 cmake boost boost-cpp eigen nlopt numpy cloudpickle ipyparallel
 # NOTE: need to use "call" because otherwise it won't work within an if block.
 - if [%BUILD_TYPE%]==[MSVC_64_Debug] call activate pagmo
 
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] set PATH=C:\Miniconda35-x64\Scripts;%PATH%
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] conda config --add channels conda-forge --force
-- if [%BUILD_TYPE%]==[MSVC_64_Python35] conda clean --all -y
-- if [%BUILD_TYPE%]==[MSVC_64_Python35] conda update conda -y
+# - if [%BUILD_TYPE%]==[MSVC_64_Python35] conda clean --all -y
+# - if [%BUILD_TYPE%]==[MSVC_64_Python35] conda update conda -y
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] conda update --all -y
-- if [%BUILD_TYPE%]==[MSVC_64_Python35] conda create -y --name pagmo python=3.5 cmake boost=1.65.1 boost-cpp=1.65.1 eigen nlopt numpy cloudpickle ipyparallel
+- if [%BUILD_TYPE%]==[MSVC_64_Python35] conda create -y --name pagmo python=3.5 cmake boost boost-cpp eigen nlopt numpy cloudpickle ipyparallel
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] call activate pagmo
 
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] set PATH=C:\Miniconda36-x64\Scripts;%PATH%
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] conda config --add channels conda-forge --force
-- if [%BUILD_TYPE%]==[MSVC_64_Python36] conda clean --all -y
-- if [%BUILD_TYPE%]==[MSVC_64_Python36] conda update conda -y 
+# - if [%BUILD_TYPE%]==[MSVC_64_Python36] conda clean --all -y
+# - if [%BUILD_TYPE%]==[MSVC_64_Python36] conda update conda -y
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] conda update --all -y
-# For the 3.6 build, let's not pin to the boost conda versions: the idea is to test with the latest boost in order
-# to pre-empt possible future problems when conda updates the pinned versions.
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] conda create -y --name pagmo python=3.6 cmake boost boost-cpp eigen nlopt numpy cloudpickle ipyparallel
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] call activate pagmo
 
@@ -63,27 +60,27 @@ install:
 build_script:
 - if [%BUILD_TYPE%]==[MSVC_64_Debug] mkdir build
 - if [%BUILD_TYPE%]==[MSVC_64_Debug] cd build
-- if [%BUILD_TYPE%]==[MSVC_64_Debug] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_BUILD_TYPE=Debug -DPAGMO_BUILD_TESTS=YES -DPAGMO_BUILD_TUTORIALS=YES -DPAGMO_WITH_EIGEN3=yes -DPAGMO_WITH_NLOPT=yes ..
+- if [%BUILD_TYPE%]==[MSVC_64_Debug] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library -DPAGMO_BUILD_TESTS=YES -DPAGMO_BUILD_TUTORIALS=YES -DPAGMO_WITH_EIGEN3=yes -DPAGMO_WITH_NLOPT=yes ..
 - if [%BUILD_TYPE%]==[MSVC_64_Debug] cmake --build . --config Debug --target install
 
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] mkdir build_pagmo
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cd build_pagmo
-- if [%BUILD_TYPE%]==[MSVC_64_Python35] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library -DCMAKE_BUILD_TYPE=Release -DPAGMO_WITH_EIGEN3=yes -DPAGMO_WITH_NLOPT=yes ..
+- if [%BUILD_TYPE%]==[MSVC_64_Python35] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library -DPAGMO_WITH_EIGEN3=yes -DPAGMO_WITH_NLOPT=yes ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cmake --build . --config Release --target install
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cd ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] mkdir build_pygmo
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cd build_pygmo
-- if [%BUILD_TYPE%]==[MSVC_64_Python35] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library -DCMAKE_BUILD_TYPE=Release -DPAGMO_BUILD_PYGMO=yes -DPAGMO_BUILD_PAGMO=no ..
+- if [%BUILD_TYPE%]==[MSVC_64_Python35] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library -DPAGMO_BUILD_PYGMO=yes -DPAGMO_BUILD_PAGMO=no ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cmake --build . --config Release --target install
 
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] mkdir build_pagmo
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cd build_pagmo
-- if [%BUILD_TYPE%]==[MSVC_64_Python36] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library -DCMAKE_BUILD_TYPE=Release -DPAGMO_WITH_EIGEN3=yes -DPAGMO_WITH_NLOPT=yes ..
+- if [%BUILD_TYPE%]==[MSVC_64_Python36] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library -DPAGMO_WITH_EIGEN3=yes -DPAGMO_WITH_NLOPT=yes ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cmake --build . --config Release --target install
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cd ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] mkdir build_pygmo
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cd build_pygmo
-- if [%BUILD_TYPE%]==[MSVC_64_Python36] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library -DCMAKE_BUILD_TYPE=Release -DPAGMO_BUILD_PYGMO=yes -DPAGMO_BUILD_PAGMO=no ..
+- if [%BUILD_TYPE%]==[MSVC_64_Python36] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library -DPAGMO_BUILD_PYGMO=yes -DPAGMO_BUILD_PAGMO=no ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cmake --build . --config Release --target install
 
 - if [%BUILD_TYPE%]==[MinGW_64_Debug] C:\Python36-x64\python.exe tools\install_appveyor_mingw.py
@@ -95,10 +92,10 @@ build_script:
 test_script:
 - if [%BUILD_TYPE%]==[MSVC_64_Debug] ctest --output-on-failure
 
-- if [%BUILD_TYPE%]==[MSVC_64_Python35] start /b ipcluster start
-- if [%BUILD_TYPE%]==[MSVC_64_Python35] timeout 20
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cd ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cd tools
+- if [%BUILD_TYPE%]==[MSVC_64_Python35] Powershell.exe -File start_ip_cluster.ps1
+- if [%BUILD_TYPE%]==[MSVC_64_Python35] timeout 20
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] python -c "import pygmo; pygmo.test.run_test_suite(1)"
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] python travis_additional_tests.py
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cd ..
@@ -106,7 +103,7 @@ test_script:
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cd uda_basic
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] mkdir build
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cd build
-- if [%BUILD_TYPE%]==[MSVC_64_Python35] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library -DCMAKE_BUILD_TYPE=Release ..
+- if [%BUILD_TYPE%]==[MSVC_64_Python35] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cmake --build . --config Release --target install
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cd ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cd ..
@@ -114,16 +111,16 @@ test_script:
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cd udp_basic
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] mkdir build
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cd build
-- if [%BUILD_TYPE%]==[MSVC_64_Python35] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library -DCMAKE_BUILD_TYPE=Release ..
+- if [%BUILD_TYPE%]==[MSVC_64_Python35] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cmake --build . --config Release --target install
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cd ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] cd ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python35] python test2.py
 
-- if [%BUILD_TYPE%]==[MSVC_64_Python36] start /b ipcluster start
-- if [%BUILD_TYPE%]==[MSVC_64_Python36] timeout 20
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cd ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cd tools
+- if [%BUILD_TYPE%]==[MSVC_64_Python36] Powershell.exe -File start_ip_cluster.ps1
+- if [%BUILD_TYPE%]==[MSVC_64_Python36] timeout 20
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] python -c "import pygmo; pygmo.test.run_test_suite(1)"
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] python travis_additional_tests.py
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cd ..
@@ -131,7 +128,7 @@ test_script:
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cd uda_basic
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] mkdir build
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cd build
-- if [%BUILD_TYPE%]==[MSVC_64_Python36] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library -DCMAKE_BUILD_TYPE=Release ..
+- if [%BUILD_TYPE%]==[MSVC_64_Python36] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cmake --build . --config Release --target install
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cd ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cd ..
@@ -139,7 +136,7 @@ test_script:
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cd udp_basic
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] mkdir build
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cd build
-- if [%BUILD_TYPE%]==[MSVC_64_Python36] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library -DCMAKE_BUILD_TYPE=Release ..
+- if [%BUILD_TYPE%]==[MSVC_64_Python36] cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cmake --build . --config Release --target install
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cd ..
 - if [%BUILD_TYPE%]==[MSVC_64_Python36] cd ..

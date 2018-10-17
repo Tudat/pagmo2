@@ -1,4 +1,4 @@
-/* Copyright 2017 PaGMO development team
+/* Copyright 2017-2018 PaGMO development team
 
 This file is part of the PaGMO library.
 
@@ -41,9 +41,11 @@ see https://www.gnu.org/licenses/. */
 #include <vector>
 
 #include <pagmo/algorithms/de.hpp>
+#include <pagmo/config.hpp>
 #include <pagmo/io.hpp>
 #include <pagmo/island.hpp>
 #include <pagmo/population.hpp>
+#include <pagmo/problem.hpp>
 #include <pagmo/problems/rosenbrock.hpp>
 #include <pagmo/serialization.hpp>
 #include <pagmo/threading.hpp>
@@ -52,9 +54,7 @@ see https://www.gnu.org/licenses/. */
 using namespace pagmo;
 
 struct udi_01 {
-    void run_evolve(island &) const
-    {
-    }
+    void run_evolve(island &) const {}
     std::string get_name() const
     {
         return "udi_01";
@@ -249,6 +249,8 @@ BOOST_AUTO_TEST_CASE(island_get_wait_busy)
     isl.wait();
 }
 
+#if !defined(PAGMO_WITH_FORK_ISLAND)
+
 struct prob_02 {
     vector_double fitness(const vector_double &) const
     {
@@ -275,7 +277,7 @@ struct algo_01 {
     }
 };
 
-BOOST_AUTO_TEST_CASE(island_tread_safety)
+BOOST_AUTO_TEST_CASE(island_thread_safety)
 {
     island isl{de{}, population{rosenbrock{}, 25}};
     auto ts = isl.get_thread_safety();
@@ -304,6 +306,8 @@ BOOST_AUTO_TEST_CASE(island_tread_safety)
     isl.evolve();
     BOOST_CHECK_THROW(isl.wait_check(), std::invalid_argument);
 }
+
+#endif
 
 BOOST_AUTO_TEST_CASE(island_name_info_stream)
 {
@@ -400,4 +404,48 @@ BOOST_AUTO_TEST_CASE(island_evolve_status)
     ss.str("");
     stream(ss, evolve_status::idle_error);
     BOOST_CHECK_EQUAL(ss.str(), "idle - **error occurred**");
+}
+
+// An algorithm that changes its state at every evolve() call.
+struct stateful_algo {
+    population evolve(const population &pop) const
+    {
+        ++n_evolve;
+        return pop;
+    }
+    mutable int n_evolve = 0;
+};
+
+// Check that the thread island correctly replaces the original
+// algorithm with the one used for evolving the population.
+BOOST_AUTO_TEST_CASE(thread_island_algo_state)
+{
+    island isl(thread_island{}, stateful_algo{}, null_problem{}, 20);
+    isl.evolve(5);
+    isl.wait_check();
+    BOOST_CHECK(isl.get_algorithm().extract<stateful_algo>()->n_evolve == 5);
+}
+
+// Extract functionality.
+BOOST_AUTO_TEST_CASE(island_extract)
+{
+    island isl(thread_island{}, stateful_algo{}, null_problem{}, 20);
+    BOOST_CHECK(isl.extract<thread_island>() != nullptr);
+    BOOST_CHECK(static_cast<const island &>(isl).extract<thread_island>() != nullptr);
+    BOOST_CHECK((std::is_same<thread_island *, decltype(isl.extract<thread_island>())>::value));
+    BOOST_CHECK((std::is_same<thread_island const *,
+                              decltype(static_cast<const island &>(isl).extract<thread_island>())>::value));
+    BOOST_CHECK(isl.is<thread_island>());
+    BOOST_CHECK(isl.extract<const thread_island>() == nullptr);
+    BOOST_CHECK(isl.extract<udi_01>() == nullptr);
+    BOOST_CHECK(!isl.is<udi_01>());
+    isl = island(udi_01{}, stateful_algo{}, null_problem{}, 20);
+    BOOST_CHECK(isl.extract<thread_island>() == nullptr);
+    BOOST_CHECK(!isl.is<thread_island>());
+    BOOST_CHECK(isl.extract<udi_01>() != nullptr);
+    BOOST_CHECK(static_cast<const island &>(isl).extract<udi_01>() != nullptr);
+    BOOST_CHECK((std::is_same<udi_01 *, decltype(isl.extract<udi_01>())>::value));
+    BOOST_CHECK((std::is_same<udi_01 const *, decltype(static_cast<const island &>(isl).extract<udi_01>())>::value));
+    BOOST_CHECK(isl.is<udi_01>());
+    BOOST_CHECK(isl.extract<const udi_01>() == nullptr);
 }

@@ -6,11 +6,18 @@ if(UNIX)
     set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 endif()
 
-# The name of the BP target to link to depends on the Python version.
-if(${PYTHON_VERSION_MAJOR} EQUAL 2)
-    set(PYGMO_BP_TARGET "Boost::python")
+# The name of the BP target to link to depends on the Boost and Python versions.
+# NOTE: since Boost 1.67, the naming of the Boost.Python library has changed to include the
+# major and minor python version as a suffix. See the release notes:
+# https://www.boost.org/users/history/version_1_67_0.html
+if(${Boost_MAJOR_VERSION} GREATER 1 OR (${Boost_MAJOR_VERSION} EQUAL 1 AND ${Boost_MINOR_VERSION} GREATER 66))
+    set(PYGMO_BP_TARGET "Boost::python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}")
 else()
-    set(PYGMO_BP_TARGET "Boost::python3")
+    if(${PYTHON_VERSION_MAJOR} EQUAL 2)
+        set(PYGMO_BP_TARGET "Boost::python")
+    else()
+        set(PYGMO_BP_TARGET "Boost::python3")
+    endif()
 endif()
 
 # Boost.Python version 1.64 (and possibly later?) has issues with default hidden visibility.
@@ -46,10 +53,13 @@ install(EXPORT pygmo_export NAMESPACE Pygmo:: DESTINATION lib/cmake/pygmo)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/include/pygmo/config.hpp" DESTINATION include/pygmo)
 
 # Setup of the pygmo core module.
-YACMA_PYTHON_MODULE(core core.cpp docstrings.cpp expose_algorithms.cpp expose_islands.cpp expose_problems.cpp)
+YACMA_PYTHON_MODULE(core core.cpp docstrings.cpp expose_algorithms_0.cpp expose_algorithms_1.cpp expose_problems_0.cpp expose_problems_1.cpp expose_islands.cpp)
 target_link_libraries(core PRIVATE ${PYGMO_BP_TARGET} Boost::disable_autolinking Pagmo::pagmo NumPy::numpy pygmo)
 target_compile_options(core PRIVATE "$<$<CONFIG:DEBUG>:${PAGMO_CXX_FLAGS_DEBUG}>" "$<$<CONFIG:RELEASE>:${PAGMO_CXX_FLAGS_RELEASE}>")
-set_property(TARGET core PROPERTY CXX_STANDARD 11)
+# Let's setup the target C++ standard, but only if the user did not provide it manually.
+if(NOT CMAKE_CXX_STANDARD)
+    set_property(TARGET core PROPERTY CXX_STANDARD 11)
+endif()
 set_property(TARGET core PROPERTY CXX_STANDARD_REQUIRED YES)
 set_property(TARGET core PROPERTY CXX_EXTENSIONS NO)
 
@@ -67,8 +77,8 @@ install(TARGETS core
 add_subdirectory(plotting)
 
 # Add the Python files.
-install(FILES __init__.py test.py _patch_problem.py _patch_algorithm.py _problem_test.py
-     _algorithm_test.py _island_test.py _py_islands.py "${CMAKE_CURRENT_BINARY_DIR}/_version.py"
+install(FILES __init__.py test.py _patch_problem.py _patch_algorithm.py _patch_island.py _problem_test.py
+     _algorithm_test.py _island_test.py _py_islands.py _py_problems.py "${CMAKE_CURRENT_BINARY_DIR}/_version.py"
      DESTINATION ${PYGMO_INSTALL_PATH})
 
 # pygmo's public headers, to be installed.

@@ -10,7 +10,7 @@ C++
 
 pagmo is a header-only library which has the following third-party dependencies:
 
-* `Boost <http://www.boost.org/>`__, **mandatory**, header-only
+* `Boost <https://www.boost.org/>`__, **mandatory**, header-only
 * `Eigen <http://eigen.tuxfamily.org/index.php?title=Main_Page>`__, optional, header-only
   (enabled via the ``PAGMO_WITH_EIGEN3`` CMake option)
 * `NLopt <https://nlopt.readthedocs.io/en/latest/>`__, optional, requires linking
@@ -89,7 +89,7 @@ Thus, the pygmo packages for conda on Windows might lack some Fortran-based feat
 (e.g., the wrapper for the Ipopt solver).
 
 Thus, in order to provide a better experience to our Windows users, we publish `pip <https://pip.pypa.io/en/stable/>`__
-packages for pygmo built with `MinGW <https://mingw-w64.org/doku.php>`__. These packages allow us both to support Python 2.7
+packages for pygmo built with `MinGW <http://mingw-w64.org/doku.php>`__. These packages allow us both to support Python 2.7
 and to provide a full-featured pygmo on Windows, thanks to the ``gfortran`` compiler. The pip packages are also available on
 Linux for those users who might prefer pip to conda, but they are **not** available on OSX.
 
@@ -136,7 +136,7 @@ For an installation from source, pygmo has the following dependencies:
 
 * pagmo (i.e., the C++ headers of the pagmo library need to be installed before attempting
   to compile pygmo),
-* `Boost.Python <http://www.boost.org/doc/libs/1_63_0/libs/python/doc/html/index.html>`__
+* `Boost.Python <https://www.boost.org/doc/libs/1_63_0/libs/python/doc/html/index.html>`__
 * `NumPy <http://www.numpy.org/>`__ (note that NumPy's development headers must be installed as well).
 
 Note that, at the present time, the versions of pygmo and pagmo must be exactly identical for the compilation of pygmo

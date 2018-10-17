@@ -1,4 +1,4 @@
-/* Copyright 2017 PaGMO development team
+/* Copyright 2017-2018 PaGMO development team
 
 This file is part of the PaGMO library.
 
@@ -324,7 +324,7 @@ Returns:
 
 std::string problem_docstring()
 {
-    return R"(__init__(udp = null_problem)
+    return R"(__init__(udp = null_problem())
 
 Problem class.
 
@@ -423,8 +423,7 @@ full list of UDPs already coded in pygmo).
 This class is the Python counterpart of the C++ class :cpp:class:`pagmo::problem`.
 
 Args:
-    udp: a user-defined problem (either C++ or Python - note that *udp* will be deep-copied
-      and stored inside the :class:`~pygmo.problem` instance)
+    udp: a user-defined problem, either C++ or Python
 
 Raises:
     NotImplementedError: if *udp* does not implement the mandatory methods detailed above
@@ -646,17 +645,32 @@ std::string problem_c_tol_docstring()
     return R"(Constraints tolerance.
 
 This property contains an array of ``float`` that are used when checking for constraint feasibility.
-The dimension of the array is :math:`n_{ec} + n_{ic}`, and the array is zero-filled on problem
-construction.
+The dimension of the array is :math:`n_{ec} + n_{ic}` (i.e., the total number of constraints), and
+the array is zero-filled on problem construction.
+
+This property can also be set via a scalar, instead of an array. In such case, all the tolerances
+will be set to the provided scalar value.
 
 Returns:
-    1D NumPy float array: the constraints tolerance
+    1D NumPy float array: the constraints' tolerances
 
 Raises:
     ValueError: if, when setting this property, the size of the input array differs from the number
       of constraints of the problem or if any element of the array is negative or NaN
     unspecified: any exception thrown by failures at the intersection between C++ and Python (e.g.,
       type conversion errors, mismatched function signatures, etc.)
+
+Examples:
+    >>> from pygmo import problem, hock_schittkowsky_71 as hs71
+    >>> prob = problem(hs71())
+    >>> prob.c_tol
+    array([0., 0.])
+    >>> prob.c_tol = [1, 2]
+    >>> prob.c_tol
+    array([1., 2.])
+    >>> prob.c_tol = .5
+    >>> prob.c_tol
+    array([0.5, 0.5])
 
 )";
 }
@@ -1150,16 +1164,15 @@ The best known solution for the )"
            + name + R"( problem.
 
 Returns:
-    1D NumPy float array: the best known solution for the )" + name + R"( problem
+    1D NumPy float array: the best known solution for the )"
+           + name + R"( problem
 
 )";
 }
 
 std::string translate_docstring()
 {
-    return R"(__init__(udp = null_problem(), translation = [0.])
-
-The translate meta-problem.
+    return R"(The translate meta-problem.
 
 This meta-problem translates the whole search space of an input :class:`pygmo.problem` or 
 user-defined problem (UDP) by a fixed translation vector. :class:`~pygmo.translate` objects 
@@ -1182,7 +1195,7 @@ Returns:
 
 std::string algorithm_docstring()
 {
-    return R"(__init__(uda = null_algorithm)
+    return R"(__init__(uda = null_algorithm())
 
 Algorithm class.
 
@@ -1235,8 +1248,7 @@ full list of UDAs already coded in pygmo).
 This class is the Python counterpart of the C++ class :cpp:class:`pagmo::algorithm`.
 
 Args:
-    uda: a user-defined algorithm (either C++ or Python - note that *uda* will be deep-copied
-      and stored inside the :class:`~pygmo.algorithm` instance)
+    uda: a user-defined algorithm, either C++ or Python
 
 Raises:
     NotImplementedError: if *uda* does not implement the mandatory method detailed above
@@ -1425,9 +1437,9 @@ Returns:
 std::string generic_uda_inner_algorithm_docstring()
 {
 
-    return R"(Inner algorithm of the meta-algorithm
+    return R"(Inner algorithm of the meta-algorithm.
 
-This read-only property gives direct access to the :class:`~pygmo.algorithm` stored within the meta-algorithm.
+This read-only property gives direct access to the :class:`~pygmo.algorithm` stored within this meta-algorithm.
 
 Returns:
     :class:`~pygmo.algorithm`: a reference to the inner algorithm
@@ -1438,9 +1450,9 @@ Returns:
 std::string generic_udp_inner_problem_docstring()
 {
 
-    return R"(Inner problem of the meta-problem
+    return R"(Inner problem of the meta-problem.
 
-This read-only property gives direct access to the :class:`~pygmo.problem` stored within the meta-problem.
+This read-only property gives direct access to the :class:`~pygmo.problem` stored within this meta-problem.
 
 Returns:
     :class:`~pygmo.problem`: a reference to the inner problem
@@ -1450,9 +1462,7 @@ Returns:
 
 std::string mbh_docstring()
 {
-    return R"(__init__(algo = compass_search(), stop = 5, perturb = 1e-2, seed = random)
-
-Monotonic Basin Hopping (generalized).
+    return R"(Monotonic Basin Hopping (generalized).
 
 Monotonic basin hopping, or simply, basin hopping, is an algorithm rooted in the idea of mapping
 the objective function :math:`f(\mathbf x_0)` into the local minima found starting from :math:`\mathbf x_0`.
@@ -1534,7 +1544,7 @@ std::string mbh_get_log_docstring()
     return R"(get_log()
 
 Returns a log containing relevant parameters recorded during the last call to ``evolve()``. The log frequency depends on the verbosity parameter
-(by default nothing is logged) which can be set calling :func:`~pygmo.algorithm.set_verbosity()` on a :class:`~pygmo.algorithm` constructed
+(by default nothing is logged) which can be set calling :func:`~pygmo.algorithm.set_verbosity()` on an :class:`~pygmo.algorithm` constructed
 with an :class:`~pygmo.mbh`. A verbosity level ``N > 0`` will log one line at the end of each call to the inner algorithm.
 
 Returns:
@@ -1581,9 +1591,7 @@ Returns:
 
 std::string cstrs_self_adaptive_docstring()
 {
-    return R"(__init__(iters = 1, algo = de(), seed = random)
-
-This meta-algorithm implements a constraint handling technique that allows the use of any user-defined algorithm
+    return R"(This meta-algorithm implements a constraint handling technique that allows the use of any user-defined algorithm
 (UDA) able to deal with single-objective unconstrained problems, on single-objective constrained problems. The
 technique self-adapts its parameters during each successive call to the inner UDA basing its decisions on the entire
 underlying population. The resulting approach is an alternative to using the meta-problem :class:`~pygmo.unconstrain`
@@ -1657,7 +1665,7 @@ std::string cstrs_self_adaptive_get_log_docstring()
     return R"(get_log()
 
 Returns a log containing relevant parameters recorded during the last call to ``evolve()``. The log frequency depends on the verbosity parameter
-(by default nothing is logged) which can be set calling :func:`~pygmo.algorithm.set_verbosity()` on a :class:`~pygmo.algorithm` constructed
+(by default nothing is logged) which can be set calling :func:`~pygmo.algorithm.set_verbosity()` on an :class:`~pygmo.algorithm` constructed
 with an :class:`~pygmo.cstrs_self_adaptive`. A verbosity level of ``N > 0`` will log one line each ``N`` ``iters``.
 
 Returns:
@@ -1832,6 +1840,27 @@ See also the docs of the C++ class :cpp:class:`pagmo::dtlz`.
 )";
 }
 
+std::string cec2014_docstring()
+{
+    return R"(__init__(prob_id = 1, dim = 2)
+
+.. versionadded:: 2.8
+
+The CEC 2014 problem suite (continuous, box-bounded, single-objective problems)
+
+Args:
+    prob_id (int): problem id (one of [1..30])
+    dim (int): number of dimensions (one of [2, 10, 20, 30, 50, 100])
+
+Raises:
+    OverflowError: if *dim* or *prob_id* are negative or greater than an implementation-defined value
+    ValueError: if *prob_id* is not in [1..28] or if *dim* is not in [2, 10, 20, 30, 50, 100] or if *dim* is 2 and *prob_id* is in [17,18,19,20,21,22,29,30]
+
+See also the docs of the C++ class :cpp:class:`pagmo::cec2014`.
+
+)";
+}
+
 std::string cec2013_docstring()
 {
     return R"(__init__(prob_id = 1, dim = 2)
@@ -2002,8 +2031,8 @@ Args:
     F (``float``): weight coefficient (dafault value is 0.8)
     CR (``float``): crossover probability (dafault value is 0.9)
     variant (``int``): mutation variant (dafault variant is 2: /rand/1/exp)
-    ftol (``float``): stopping criteria on the x tolerance (default is 1e-6)
-    xtol (``float``): stopping criteria on the f tolerance (default is 1e-6)
+    ftol (``float``): stopping criteria on the f tolerance (default is 1e-6)
+    xtol (``float``): stopping criteria on the x tolerance (default is 1e-6)
     seed (``int``): seed used by the internal random number generator (default is random)
 
 Raises:
@@ -2631,7 +2660,7 @@ Args:
 
 Raises:
     OverflowError: if *gen* or *seed* is negative or greater than an implementation-defined value
-    ValueError: if *omega* is not in the [0,1] interval, if *eta1*, *eta2* are not in the [0,1] interval, if *max_vel* is not in ]0,1]
+    ValueError: if *omega* is not in the [0,1] interval, if *eta1*, *eta2* are not in the [0,4] interval, if *max_vel* is not in ]0,1]
     ValueError: *variant* is not one of 1 .. 6, if *neighb_type* is not one of 1 .. 4 or if *neighb_param* is zero
 
 The following variants can be selected via the *variant* parameter:
@@ -2665,7 +2694,7 @@ std::string pso_get_log_docstring()
 
 Returns a log containing relevant parameters recorded during the last call to ``evolve()`` and printed to screen. The log frequency depends on the verbosity
 parameter (by default nothing is logged) which can be set calling the method :func:`~pygmo.algorithm.set_verbosity()` on an :class:`~pygmo.algorithm`
-constructed with a :class:`~pygmo.de1220`. A verbosity of ``N`` implies a log line each ``N`` generations.
+constructed with a :class:`~pygmo.pso`. A verbosity of ``N`` implies a log line each ``N`` generations.
 
 Returns:
     ``list`` of ``tuples``: at each logged epoch, the values ``Gen``, ``Fevals``, ``gbest``, ``Mean Vel.``, ``Mean lbest``, ``Avg. Dist.``, where:
@@ -2695,7 +2724,104 @@ Examples:
      351           7040        6.09414    0.000187343        16.8875     0.00172307
      401           8040        5.78415    0.000524536        16.5073     0.00234197
      451           9040         5.4662     0.00018305        16.2339    0.000958182
-    >>> uda = algo.extract(de1220)
+    >>> uda = algo.extract(pso)
+    >>> uda.get_log() # doctest: +SKIP
+    [(1,40,72473.32713790605,0.1738915144248373,677427.3504996448,0.2817443174278134), (51,1040,...
+
+See also the docs of the relevant C++ method :cpp:func:`pagmo::pso::get_log()`.
+
+)";
+}
+
+//----------
+std::string pso_gen_docstring()
+{
+    return R"(__init__(gen = 1, omega = 0.7298, eta1 = 2.05, eta2 = 2.05, max_vel = 0.5, variant = 5, neighb_type = 2, neighb_param = 4, memory = False, seed = random)
+
+Particle Swarm Optimization (generational) is identical to :class:`~pygmo.pso`, but does update the velocities of each particle before new particle positions are computed (taking
+into consideration all updated particle velocities). Each particle is thus evaluated on the same seed within a generation as opposed to the standard PSO which evaluates single particle 
+at a time. Consequently, the generational PSO algorithm is suited for stochastic optimization problems.
+
+
+Args:
+    gen (``int``): number of generations
+    omega (``float``): inertia weight (or constriction factor)
+    eta1 (``float``): social component
+    eta2 (``float``): cognitive component
+    max_vel (``float``): maximum allowed particle velocities (normalized with respect to the bounds width)
+    variant (``int``): algoritmic variant
+    neighb_type (``int``): swarm topology (defining each particle's neighbours)
+    neighb_param (``int``): topology parameter (defines how many neighbours to consider)
+    memory (``bool``): when true the velocities are not reset between successive calls to the evolve method
+    seed (``int``): seed used by the internal random number generator (default is random)
+
+Raises:
+    OverflowError: if *gen* or *seed* is negative or greater than an implementation-defined value
+    ValueError: if *omega* is not in the [0,1] interval, if *eta1*, *eta2* are not in the [0,1] interval, if *max_vel* is not in ]0,1]
+    ValueError: *variant* is not one of 1 .. 6, if *neighb_type* is not one of 1 .. 4 or if *neighb_param* is zero
+
+The following variants can be selected via the *variant* parameter:
+
++-----------------------------------------+-----------------------------------------+
+| 1 - Canonical (with inertia weight)     | 2 - Same social and cognitive rand.     |
++-----------------------------------------+-----------------------------------------+
+| 3 - Same rand. for all components       | 4 - Only one rand.                      |
++-----------------------------------------+-----------------------------------------+
+| 5 - Canonical (with constriction fact.) | 6 - Fully Informed (FIPS)               |
++-----------------------------------------+-----------------------------------------+
+
+
+The following topologies are selected by *neighb_type*:
+
++--------------------------------------+--------------------------------------+
+| 1 - gbest                            | 2 - lbest                            |
++--------------------------------------+--------------------------------------+
+| 3 - Von Neumann                      | 4 - Adaptive random                  |
++--------------------------------------+--------------------------------------+
+
+The topology determines (together with the topology parameter) which particles need to be considered
+when computing the social component of the velocity update.
+
+)";
+}
+
+std::string pso_gen_get_log_docstring()
+{
+    return R"(get_log()
+
+Returns a log containing relevant parameters recorded during the last call to ``evolve()`` and printed to screen. The log frequency depends on the verbosity
+parameter (by default nothing is logged) which can be set calling the method :func:`~pygmo.algorithm.set_verbosity()` on an :class:`~pygmo.algorithm`
+constructed with a :class:`~pygmo.pso`. A verbosity of ``N`` implies a log line each ``N`` generations.
+
+Returns:
+    ``list`` of ``tuples``: at each logged epoch, the values ``Gen``, ``Fevals``, ``gbest``, ``Mean Vel.``, ``Mean lbest``, ``Avg. Dist.``, where:
+
+    * ``Gen`` (``int``), generation number
+    * ``Fevals`` (``int``), number of functions evaluation made
+    * ``gbest`` (``float``), the best fitness function found so far by the the swarm
+    * ``Mean Vel.`` (``float``), the average particle velocity (normalized)
+    * ``Mean lbest`` (``float``), the average fitness of the current particle locations
+    * ``Avg. Dist.`` (``float``), the average distance between particles (normalized)
+
+Examples:
+    >>> from pygmo import *
+    >>> algo = algorithm(pso(gen = 500))
+    >>> algo.set_verbosity(50)
+    >>> prob = problem(rosenbrock(10))
+    >>> pop = population(prob, 20)
+    >>> pop = algo.evolve(pop) # doctest: +SKIP
+    Gen:        Fevals:         gbest:     Mean Vel.:    Mean lbest:    Avg. Dist.:
+       1             40        72473.3       0.173892         677427       0.281744
+      51           1040        135.867      0.0183806        748.001       0.065826
+     101           2040        12.6726     0.00291046        84.9531      0.0339452
+     151           3040         8.4405    0.000852588        33.5161      0.0191379
+     201           4040        7.56943    0.000778264         28.213     0.00789202
+     251           5040         6.8089     0.00435521        22.7988     0.00107112
+     301           6040         6.3692    0.000289725        17.3763     0.00325571
+     351           7040        6.09414    0.000187343        16.8875     0.00172307
+     401           8040        5.78415    0.000524536        16.5073     0.00234197
+     451           9040         5.4662     0.00018305        16.2339    0.000958182
+    >>> uda = algo.extract(pso)
     >>> uda.get_log() # doctest: +SKIP
     [(1,40,72473.32713790605,0.1738915144248373,677427.3504996448,0.2817443174278134), (51,1040,...
 
@@ -2812,9 +2938,7 @@ Returns:
 
 std::string decompose_docstring()
 {
-    return R"(__init__(udp = null_problem(nobj = 2), weight = [0.5, 0.5], z = [0.,0.], method = 'weighted', adapt_ideal = False)
-
-The decompose meta-problem.
+    return R"(The decompose meta-problem.
 
 This meta-problem *decomposes* a multi-objective input user-defined problem,
 resulting in a single-objective user-defined problem with a fitness function combining the
@@ -2929,9 +3053,7 @@ Raises:
 
 std::string unconstrain_docstring()
 {
-    return R"(__init__(prob = null_problem(nobj=2, nec=3, nic=4), method = "death penalty", weights = [])
-
-The unconstrain meta-problem.
+    return R"(The unconstrain meta-problem.
 
 This meta-problem transforms a constrained problem into an unconstrained problem applying one of the following methods:
 
@@ -3428,8 +3550,8 @@ Examples:
     >>> import pygmo as pg
     >>> def my_fun(x):
     ...     return [x[0]+x[3], x[2], x[1]]
-    >>> pg.estimate_gradient(callable = my_fun, x = [0]*4, dx = 1e-8)
-    array([ 1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.])
+    >>> pg.estimate_gradient(callable = my_fun, x = [0]*4, dx = 1e-8) # doctest: +NORMALIZE_WHITESPACE
+    array([1., 0., 0., 1., 0., 0., 1., 0., 0., 1., 0., 0.])
 )";
 }
 
@@ -3471,8 +3593,8 @@ Examples:
     >>> import pygmo as pg
     >>> def my_fun(x):
     ...     return [x[0]+x[3], x[2], x[1]]
-    >>> pg.estimate_gradient_h(callable = my_fun, x = [0]*4, dx = 1e-2)
-    array([ 1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.])
+    >>> pg.estimate_gradient_h(callable = my_fun, x = [0]*4, dx = 1e-2) # doctest: +NORMALIZE_WHITESPACE
+    array([1., 0., 0., 1., 0., 0., 1., 0., 0., 1., 0., 0.])
 )";
 }
 
@@ -3495,11 +3617,11 @@ Examples:
     >>> pg.set_global_rng_seed(seed = 32)
     >>> pop = pg.population(prob = pg.ackley(5), size = 20)
     >>> print(pop.champion_f)
-    [ 17.26891503]
+    [17.26891503]
     >>> pg.set_global_rng_seed(seed = 32)
     >>> pop = pg.population(prob = pg.ackley(5), size = 20)
     >>> print(pop.champion_f)
-    [ 17.26891503]
+    [17.26891503]
     )";
 }
 
@@ -3812,11 +3934,7 @@ the following method:
 
 The ``run_evolve()`` method of the UDI will use the input :class:`~pygmo.algorithm`'s
 :func:`~pygmo.algorithm.evolve()` method to evolve the input :class:`~pygmo.population` and, once the evolution
-is finished, it will return the evolved :class:`~pygmo.population`. Note that, since internally the :class:`~pygmo.island`
-class uses a separate thread of execution to provide asynchronous behaviour, a UDI needs to guarantee a certain degree of
-thread-safety: it must be possible to interact with the UDI while evolution is ongoing (e.g., it must be possible to copy
-the UDI while evolution is undergoing, or call the ``get_name()``, ``get_extra_info()`` methods, etc.), otherwise the behaviour
-will be undefined.
+is finished, it will return the algorithm used for the evolution and the evolved :class:`~pygmo.population`.
 
 In addition to the mandatory ``run_evolve()`` method, a UDI may implement the following optional methods:
 
@@ -3829,6 +3947,15 @@ In addition to the mandatory ``run_evolve()`` method, a UDI may implement the fo
 
 See the documentation of the corresponding methods in this class for details on how the optional
 methods in the UDI are used by :class:`~pygmo.island`.
+
+Note that, due to the asynchronous nature of :class:`~pygmo.island`, a UDI has certain requirements regarding
+thread safety. Specifically, ``run_evolve()`` is always called in a separate thread of execution, and consequently:
+
+* multiple UDI objects may be calling their own ``run_evolve()`` method concurrently,
+* in a specific UDI object, any method from the public API of the UDI may be called while ``run_evolve()`` is
+  running concurrently in another thread. Thus, UDI writers must ensure that actions such as copying
+  the UDI, calling the optional methods (such as ``get_name()``), etc. can be safely performed while the island
+  is evolving.
 
 An island can be initialised in a variety of ways using keyword arguments:
 
@@ -3866,9 +3993,9 @@ This method will evolve the island’s :class:`~pygmo.population` using the isla
 The evolution happens asynchronously: a call to :func:`~pygmo.island.evolve()` will create an evolution task that
 will be pushed to a queue, and then return immediately. The tasks in the queue are consumed by a separate thread of execution
 managed by the :class:`~pygmo.island` object. Each task will invoke the ``run_evolve()`` method of the UDI *n*
-times consecutively to perform the actual evolution. The island's population will be updated at the end of each ``run_evolve()``
-invocation. Exceptions raised inside the tasks are stored within the island object, and can be re-raised by calling
-:func:`~pygmo.island.wait_check()`.
+times consecutively to perform the actual evolution. The island's algorithm and population will be updated at the
+end of each ``run_evolve()`` invocation. Exceptions raised inside the tasks are stored within the island object,
+and can be re-raised by calling :func:`~pygmo.island.wait_check()`.
 
 It is possible to call this method multiple times to enqueue multiple evolution tasks, which will be consumed in a FIFO (first-in
 first-out) fashion. The user may call :func:`~pygmo.island.wait()` or :func:`~pygmo.island.wait_check()` to block until all
@@ -4259,13 +4386,14 @@ NLopt algorithms is:
 * augmented Lagrangian algorithm.
 
 The desired NLopt solver is selected upon construction of an :class:`~pygmo.nlopt` algorithm. Various properties
-of the solver (e.g., the stopping criteria) can be configured via class attributes. Note that multiple
+of the solver (e.g., the stopping criteria) can be configured via class attributes. Multiple
 stopping criteria can be active at the same time: the optimisation will stop as soon as at least one stopping criterion
 is satisfied. By default, only the ``xtol_rel`` stopping criterion is active (see :attr:`~pygmo.nlopt.xtol_rel`).
 
 All NLopt solvers support only single-objective optimisation, and, as usual in pygmo, minimisation
 is always assumed. The gradient-based algorithms require the optimisation problem to provide a gradient.
-Some solvers support equality and/or inequality constraints.
+Some solvers support equality and/or inequality constraints. The constraints' tolerances will
+be set to those specified in the :class:`~pygmo.problem` being optimised (see :attr:`pygmo.problem.c_tol`).
 
 In order to support pygmo's population-based optimisation model, the ``evolve()`` method will select
 a single individual from the input :class:`~pygmo.population` to be optimised by the NLopt solver.
@@ -4281,7 +4409,7 @@ and :attr:`~pygmo.nlopt.replacement` attributes.
 
 .. seealso::
 
-   The `NLopt website <http://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/>`__ contains a detailed description
+   The `NLopt website <https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/>`__ contains a detailed description
    of each supported solver.
 
 This constructor will initialise an :class:`~pygmo.nlopt` object which will use the NLopt algorithm specified by
@@ -4319,7 +4447,7 @@ See also the docs of the C++ class :cpp:class:`pagmo::nlopt`.
 
 .. seealso::
 
-   The `NLopt website <http://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/>`__ contains a detailed
+   The `NLopt website <https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/>`__ contains a detailed
    description of each supported solver.
 
 Args:
@@ -4586,7 +4714,8 @@ Args:
     seed (``int``): the value that will be used to seed the random number generator used by the ``"random"``
       election/replacement policies (see :attr:`~pygmo.)"
            + algo + R"(.selection` and
-      :attr:`~pygmo.)" + algo + R"(.replacement`)
+      :attr:`~pygmo.)"
+           + algo + R"(.replacement`)
 
 Raises:
     OverflowError: if the attribute is set to an integer which is negative or too large
@@ -5470,4 +5599,4 @@ Examples:
 )";
 }
 
-} // namespace
+} // namespace pygmo

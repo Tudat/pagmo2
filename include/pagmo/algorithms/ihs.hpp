@@ -1,4 +1,4 @@
-/* Copyright 2017 PaGMO development team
+/* Copyright 2017-2018 PaGMO development team
 
 This file is part of the PaGMO library.
 
@@ -31,6 +31,7 @@ see https://www.gnu.org/licenses/. */
 
 #include <cmath>  // log, etc..
 #include <random> // uniform_int, etc..
+#include <iomanip> // setw
 
 #include <pagmo/io.hpp>
 #include <pagmo/population.hpp>
@@ -73,7 +74,7 @@ namespace pagmo
  * .. note::
  *
  *    The original IHS algorithm was designed to solve unconstrained, deterministic single objective problems.
- *    In pagmo, the algorithm was modified to tackle also multi-objective, constrained (box and non linearly)
+ *    In pagmo, the algorithm was modified to tackle also multi-objective (unconstrained), constrained (single-objective)
  *    and stochastic problems. Such extension is original with pagmo.
  *
  * .. seealso::
@@ -82,7 +83,8 @@ namespace pagmo
  *
  * .. seealso::
  *
- *    http://dx.doi.org/10.1016/j.amc.2006.11.033 for the paper that introduces and explains improved harmony search.
+ *    https://linkinghub.elsevier.com/retrieve/pii/S0096300306015098 for the paper that introduces and explains improved
+ *    harmony search.
  *
  * \endverbatim
  */

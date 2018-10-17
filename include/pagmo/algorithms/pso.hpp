@@ -1,4 +1,4 @@
-/* Copyright 2017 PaGMO development team
+/* Copyright 2017-2018 PaGMO development team
 
 This file is part of the PaGMO library.
 
@@ -29,6 +29,9 @@ see https://www.gnu.org/licenses/. */
 #ifndef PAGMO_ALGORITHMS_PSO_HPP
 #define PAGMO_ALGORITHMS_PSO_HPP
 
+#include <cinttypes>
+#include <cmath>
+#include <cstdlib>
 #include <iomanip>
 #include <random>
 #include <string>
@@ -43,6 +46,30 @@ see https://www.gnu.org/licenses/. */
 
 namespace pagmo
 {
+
+namespace detail
+{
+
+// Usual trick with global read-only data.
+template <typename = void>
+struct pso_statics {
+    /*! @brief Von Neumann neighborhood
+     *  (increments on particles' lattice coordinates that produce the coordinates of their neighbors)
+     *
+     *  The von Neumann neighbourhood of a point includes all the points at a Hamming distance of 1.
+     *
+     *  - https://en.wikipedia.org/wiki/Von_Neumann_neighborhood
+     *  - http://mathworld.wolfram.com/vonNeumannNeighborhood.html
+     *  - https://en.wikibooks.org/wiki/Cellular_Automata/Neighborhood
+     */
+    static const int vonNeumann_neighb_diff[4][2];
+};
+
+// Init of the statics data
+template <typename T>
+const int pso_statics<T>::vonNeumann_neighb_diff[4][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+
+} // namespace detail
 
 /// Particle Swarm Optimization
 /**
@@ -105,7 +132,7 @@ namespace pagmo
  *
  * .. seealso::
  *
- *    http://dx.doi.org/10.1007/s11721-007-0002-0 for a survey
+ *    https://link.springer.com/article/10.1007%2Fs11721-007-0002-0 for a survey
  *
  * \endverbatim
  */
@@ -140,7 +167,7 @@ public:
      * @param memory when true the particle velocities are not reset between successive calls to evolve
      * @param seed seed used by the internal random number generator (default is random)
      *
-     * @throws std::invalid_argument if omega is not in the [0,1] interval, eta1, eta2 are not in the [0,1] interval,
+     * @throws std::invalid_argument if omega is not in the [0,1] interval, eta1, eta2 are not in the [0,4] interval,
      * vcoeff is not in ]0,1], variant is not one of 1 .. 6, neighb_type is not one of 1 .. 4, neighb_param is zero
      */
     pso(unsigned int gen = 1u, double omega = 0.7298, double eta1 = 2.05, double eta2 = 2.05, double max_vel = 0.5,
@@ -752,17 +779,6 @@ private:
         }
     }
 
-    /*! @brief Von Neumann neighborhood
-     *  (increments on particles' lattice coordinates that produce the coordinates of their neighbors)
-     *
-     *  The von Neumann neighbourhood of a point includes all the points at a Hamming distance of 1.
-     *
-     *  - http://en.wikipedia.org/wiki/Von_Neumann_neighborhood
-     *  - http://mathworld.wolfram.com/vonNeumannNeighborhood.html
-     *  - http://en.wikibooks.org/wiki/Cellular_Automata/Neighborhood
-     */
-    const int vonNeumann_neighb_diff[4][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-
     /**
      *  @brief Arranges particles in a lattice, where each interacts with its immediate 4 neighbors to the N, S, E and
      * W.
@@ -798,9 +814,9 @@ private:
             p_y = pidx / cols;
 
             for (unsigned int nidx = 0u; nidx < 4u; nidx++) {
-                n_x = (p_x + vonNeumann_neighb_diff[nidx][0]) % cols;
+                n_x = (p_x + detail::pso_statics<>::vonNeumann_neighb_diff[nidx][0]) % cols;
                 if (n_x < 0) n_x = cols + n_x;
-                n_y = (p_y + vonNeumann_neighb_diff[nidx][1]) % rows;
+                n_y = (p_y + detail::pso_statics<>::vonNeumann_neighb_diff[nidx][1]) % rows;
                 if (n_y < 0) n_y = rows + n_y;
 
                 neighb[static_cast<unsigned int>(pidx)].push_back(static_cast<unsigned int>(n_y * cols + n_x));
