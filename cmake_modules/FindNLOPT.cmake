@@ -1,6 +1,6 @@
 if(NLOPT_INCLUDE_DIR AND NLOPT_LIBRARY)
-	# Already in cache, be silent
-	set(NLOPT_FIND_QUIETLY TRUE)
+        # Already in cache, be silent
+        set(NLOPT_FIND_QUIETLY TRUE)
 endif()
  
 message(STATUS "Nlopt directory: ${NLOPT_INCLUDE_DIR}")

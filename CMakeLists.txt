@@ -137,6 +137,8 @@ if(PAGMO_BUILD_PAGMO)
 
     # NLopt
     if(PAGMO_WITH_NLOPT)
+        message(STATUS "Finding NLOPT")
+
         #find_package(NLOPT REQUIRED)
         set(NLOPT_LIBRARY "/home/dominic/Software/tudatBundleTest/tudatBundle/nlopt/lib/libnlopt.a")
         set(NLOPT_INCLUDE_DIR "/home/dominic/Software/tudatBundleTest/tudatBundle/nlopt")
