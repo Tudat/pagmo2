@@ -17,7 +17,7 @@ Fork island
 
    This user-defined island (UDI) will use the POSIX ``fork()`` system call to offload the evolution
    of a population to a child process.
-   
+
    Generally speaking, users are encouraged to use :cpp:class:`~pagmo::thread_island` rather than
    :cpp:class:`~pagmo::fork_island`: :cpp:class:`~pagmo::thread_island` performs better,
    it works also with problems and algorithms which are not serialisable, and it is available on all
@@ -29,7 +29,7 @@ Fork island
    that thread-unsafe problems and algorithms are always run in only one thread at a time.
    This capability is particularly useful when wrapping in pagmo third-party code which does not support execution
    in multithreaded contexts (a notable example is the :cpp:class:`~pagmo::ipopt` algorithm,
-   which uses the thread-unsafe IPOPT optimiser).
+   which uses the thread-unsafe Ipopt optimiser).
 
    :cpp:class:`~pagmo::fork_island` is the UDI type automatically selected by the constructors of :cpp:class:`~pagmo::island`
    on POSIX platforms when the island's problem and/or algorithm do not provide the basic :cpp:type:`~pagmo::thread_safety`
@@ -47,11 +47,19 @@ Fork island
       fact that the child process is exited via ``std::exit()`` (which does not invoke the destructors
       of objects with automatic storage duration). Thus, such warnings can be safely ignored.
 
+   .. note::
+
+      The ability of the forked process to handle errors raised during evolution is dependent on the
+      specific ``fork()`` implementation in use. For instance, it has been reported that on recent OSX versions
+      (i.e., since High Sierra), error handling in the forked process does not work, possibly because it employs
+      code which is not `asynchronous-safe <http://man7.org/linux/man-pages/man7/signal-safety.7.html>`__.
+
    .. cpp:function:: fork_island()
    .. cpp:function:: fork_island(const fork_island &)
    .. cpp:function:: fork_island(fork_island &&) noexcept
 
-      :cpp:class:`~pagmo::fork_island` is default, copy and move-constructible.
+      :cpp:class:`~pagmo::fork_island` is default, copy and move-constructible. The copy and move constructor are equivalent
+      to the default constructor.
 
    .. cpp:function:: void run_evolve(island &isl) const
 
@@ -79,14 +87,14 @@ Fork island
    .. cpp:function:: std::string get_extra_info() const
 
       :return: if an evolution is ongoing, this method will return a string
-         representation of the ID of the child process. Otherwise, the ``"No active child."`` string will be returned.
+         representation of the ID of the child process. Otherwise, the ``"No active child"`` string will be returned.
 
    .. cpp:function:: pid_t get_child_pid() const
 
       :return: a signed integral value representing the process ID of the child process, if an evolution is ongoing. Otherwise,
          ``0`` will be returned.
 
-   .. cpp:function:: template <typename Archive> void serialize(Archive &)
+   .. cpp:function:: template <typename Archive> void serialize(Archive &, unsigned)
 
       Serialisation support.
 

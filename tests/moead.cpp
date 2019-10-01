@@ -27,7 +27,8 @@ GNU Lesser General Public License along with the PaGMO library.  If not,
 see https://www.gnu.org/licenses/. */
 
 #define BOOST_TEST_MODULE moead_test
-#include <boost/test/included/unit_test.hpp>
+//#define BOOST_TEST_DYN_LINK
+#include <boost/test/unit_test.hpp>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/test/floating_point_comparison.hpp>
@@ -39,7 +40,7 @@ see https://www.gnu.org/licenses/. */
 #include <pagmo/io.hpp>
 #include <pagmo/problems/rosenbrock.hpp>
 #include <pagmo/problems/zdt.hpp>
-#include <pagmo/serialization.hpp>
+#include <pagmo/s11n.hpp>
 #include <pagmo/types.hpp>
 
 using namespace pagmo;
@@ -75,6 +76,8 @@ BOOST_AUTO_TEST_CASE(moead_algorithm_construction)
                       std::invalid_argument);
     BOOST_CHECK_THROW((moead{10u, "grid", "tchebycheff", 20u, 1., 0.5, 20., -0.34, 2u, true, 23u}),
                       std::invalid_argument);
+    // Wrong neighbours
+    BOOST_CHECK_THROW((moead{10u, "grid", "tchebycheff", 1u, 1., 0.5, 20., 0.9, 2u, true, 23u}), std::invalid_argument);
 }
 
 struct mo_con {
@@ -113,7 +116,7 @@ struct mo_sto {
     {
         return {{0., 0.}, {1., 1.}};
     }
-    void set_seed(unsigned int) {}
+    void set_seed(unsigned) {}
 };
 
 struct mo_many {
@@ -130,6 +133,23 @@ struct mo_many {
     std::pair<vector_double, vector_double> get_bounds() const
     {
         return {{0., 0.}, {1., 1.}};
+    }
+};
+
+struct mo_equal_bounds {
+    /// Fitness
+    vector_double fitness(const vector_double &) const
+    {
+        return {0., 0.};
+    }
+    vector_double::size_type get_nobj() const
+    {
+        return 2u;
+    }
+    /// Problem bounds
+    std::pair<vector_double, vector_double> get_bounds() const
+    {
+        return {{0., 0.}, {1., 0.}};
     }
 };
 
@@ -160,6 +180,8 @@ BOOST_AUTO_TEST_CASE(moead_evolve_test)
     BOOST_CHECK(user_algo1.get_log() == user_algo2.get_log());
 
     // We then check that the method evolve fails when called on unsuitable problems (populations)
+    // Some bound is equal
+    BOOST_CHECK_THROW(moead{10u}.evolve(population{problem{mo_equal_bounds{}}, 0u}), std::invalid_argument);
     // Empty population.
     BOOST_CHECK_THROW(moead{10u}.evolve(population{problem{rosenbrock{}}, 0u}), std::invalid_argument);
     // Single objective problem
@@ -171,7 +193,6 @@ BOOST_AUTO_TEST_CASE(moead_evolve_test)
     // Population size is too small for the neighbourhood specified
     BOOST_CHECK_THROW(moead(10u, "grid", "tchebycheff", 20u).evolve(population{problem{zdt{}}, 15u}),
                       std::invalid_argument);
-
     // And a clean exit for 0 generations
     population pop{zdt{}, 40u};
     BOOST_CHECK(moead{0u}.evolve(pop).get_x()[0] == pop.get_x()[0]);
@@ -209,19 +230,19 @@ BOOST_AUTO_TEST_CASE(moead_serialization_test)
     auto before_log = algo.extract<moead>()->get_log();
     // Now serialize, deserialize and compare the result.
     {
-        cereal::JSONOutputArchive oarchive(ss);
-        oarchive(algo);
+        boost::archive::binary_oarchive oarchive(ss);
+        oarchive << algo;
     }
     // Change the content of p before deserializing.
-    algo = algorithm{null_algorithm{}};
+    algo = algorithm{};
     {
-        cereal::JSONInputArchive iarchive(ss);
-        iarchive(algo);
+        boost::archive::binary_iarchive iarchive(ss);
+        iarchive >> algo;
     }
     auto after_text = boost::lexical_cast<std::string>(algo);
     auto after_log = algo.extract<moead>()->get_log();
     BOOST_CHECK_EQUAL(before_text, after_text);
-    // BOOST_CHECK(before_log == after_log); // This fails because of floating point problems when using JSON and cereal
+    BOOST_CHECK(before_log == after_log);
     // so we implement a close check
     BOOST_CHECK(before_log.size() > 0u);
     for (auto i = 0u; i < before_log.size(); ++i) {

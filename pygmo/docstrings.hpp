@@ -54,6 +54,10 @@ std::string problem_docstring();
 std::string problem_get_best_docstring(const std::string &);
 std::string problem_fitness_docstring();
 std::string problem_get_bounds_docstring();
+std::string problem_batch_fitness_docstring();
+std::string problem_has_batch_fitness_docstring();
+std::string problem_get_lb_docstring();
+std::string problem_get_ub_docstring();
 std::string problem_get_nec_docstring();
 std::string problem_get_nic_docstring();
 std::string problem_get_nobj_docstring();
@@ -114,6 +118,7 @@ std::string decompose_z_docstring();
 std::string unconstrain_docstring();
 std::string get_best_docstring(const std::string &);
 std::string generic_udp_inner_problem_docstring();
+std::string wfg_docstring();
 
 // user - algorithms
 std::string null_algorithm_docstring();
@@ -131,8 +136,14 @@ std::string de1220_docstring();
 std::string de1220_get_log_docstring();
 std::string moead_docstring();
 std::string moead_get_log_docstring();
+std::string nsga2_set_bfe_docstring();
 std::string nsga2_docstring();
 std::string nsga2_get_log_docstring();
+std::string gaco_set_bfe_docstring();
+std::string gaco_docstring();
+std::string gaco_get_log_docstring();
+std::string gwo_docstring();
+std::string gwo_get_log_docstring();
 std::string pso_docstring();
 std::string pso_get_log_docstring();
 std::string pso_gen_docstring();
@@ -196,6 +207,7 @@ std::string generic_uda_inner_algorithm_docstring();
 // utilities
 // generic
 std::string random_decision_vector_docstring();
+std::string batch_random_decision_vector_docstring();
 // hypervolume
 std::string hv_init1_docstring();
 std::string hv_init2_docstring();
@@ -243,7 +255,8 @@ std::string island_get_population_docstring();
 std::string island_set_population_docstring();
 std::string island_get_name_docstring();
 std::string island_get_extra_info_docstring();
-std::string island_get_thread_safety_docstring();
+std::string island_get_r_policy_docstring();
+std::string island_get_s_policy_docstring();
 
 // udi.
 std::string thread_island_docstring();
@@ -257,6 +270,66 @@ std::string archipelago_wait_check_docstring();
 std::string archipelago_getitem_docstring();
 std::string archipelago_get_champions_f_docstring();
 std::string archipelago_get_champions_x_docstring();
+std::string archipelago_get_migrants_db_docstring();
+std::string archipelago_get_migration_log_docstring();
+std::string archipelago_get_topology_docstring();
+std::string archipelago_get_migration_type_docstring();
+std::string archipelago_set_migration_type_docstring();
+std::string archipelago_get_migrant_handling_docstring();
+std::string archipelago_set_migrant_handling_docstring();
+
+// bfe.
+std::string bfe_docstring();
+std::string bfe_call_docstring();
+std::string bfe_get_name_docstring();
+std::string bfe_get_extra_info_docstring();
+std::string bfe_get_thread_safety_docstring();
+
+// udbfe.
+std::string default_bfe_docstring();
+std::string thread_bfe_docstring();
+std::string member_bfe_docstring();
+
+// topology.
+std::string topology_docstring();
+std::string topology_get_connections_docstring();
+std::string topology_push_back_docstring();
+std::string topology_get_name_docstring();
+std::string topology_get_extra_info_docstring();
+
+// udt.
+std::string unconnected_docstring();
+std::string base_bgl_num_vertices_docstring();
+std::string base_bgl_are_adjacent_docstring();
+std::string base_bgl_add_vertex_docstring();
+std::string base_bgl_add_edge_docstring();
+std::string base_bgl_remove_edge_docstring();
+std::string base_bgl_set_weight_docstring();
+std::string base_bgl_set_all_weights_docstring();
+std::string ring_docstring();
+std::string ring_get_weight_docstring();
+std::string fully_connected_docstring();
+std::string fully_connected_get_weight_docstring();
+std::string fully_connected_num_vertices_docstring();
+
+// r_policy.
+std::string r_policy_docstring();
+std::string r_policy_replace_docstring();
+std::string r_policy_get_name_docstring();
+std::string r_policy_get_extra_info_docstring();
+
+// udrp.
+std::string fair_replace_docstring();
+
+// s_policy
+std::string s_policy_docstring();
+std::string s_policy_select_docstring();
+std::string s_policy_get_name_docstring();
+std::string s_policy_get_extra_info_docstring();
+
+// udsp.
+std::string select_best_docstring();
+
 } // namespace pygmo
 
 #endif

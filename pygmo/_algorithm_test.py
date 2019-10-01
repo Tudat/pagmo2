@@ -140,8 +140,15 @@ class algorithm_test_case(_ut.TestCase):
         self.assertRaises(TypeError, lambda: algo.evolve(
             population(null_problem(), 5)))
 
+        # Test that construction from another pygmo.algorithm fails.
+        with self.assertRaises(TypeError) as cm:
+            algorithm(algo)
+        err = cm.exception
+        self.assertTrue(
+            "a pygmo.algorithm cannot be used as a UDA for another pygmo.algorithm (if you need to copy an algorithm please use the standard Python copy()/deepcopy() functions)" in str(err))
+
     def run_extract_tests(self):
-        from .core import algorithm, _test_algorithm, mbh
+        from .core import algorithm, _test_algorithm, mbh, de
         import sys
 
         # First we try with a C++ test algo.
@@ -205,6 +212,16 @@ class algorithm_test_case(_ut.TestCase):
         self.assertTrue(talgo.get_n() == 1)
         talgo.set_n(12)
         self.assert_(p.extract(talgorithm).get_n() == 12)
+
+        # Check that we can extract Python UDAs also via Python's object type.
+        a = algorithm(talgorithm())
+        self.assertTrue(not a.extract(object) is None)
+        # Check we are referring to the same object.
+        self.assertEqual(id(a.extract(object)), id(a.extract(talgorithm)))
+        # Check that it will not work with exposed C++ algorithms.
+        a = algorithm(de())
+        self.assertTrue(a.extract(object) is None)
+        self.assertTrue(not a.extract(de) is None)
 
     def run_seed_tests(self):
         from .core import algorithm

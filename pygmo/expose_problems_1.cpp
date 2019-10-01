@@ -60,6 +60,7 @@ see https://www.gnu.org/licenses/. */
 #if defined(PAGMO_ENABLE_CEC2013)
 #include <pagmo/problems/cec2013.hpp>
 #endif
+#include <pagmo/problems/golomb_ruler.hpp>
 #include <pagmo/problems/luksan_vlcek1.hpp>
 #include <pagmo/problems/minlp_rastrigin.hpp>
 #include <pagmo/problems/rastrigin.hpp>
@@ -67,6 +68,7 @@ see https://www.gnu.org/licenses/. */
 #include <pagmo/problems/schwefel.hpp>
 #include <pagmo/problems/translate.hpp>
 #include <pagmo/problems/unconstrain.hpp>
+#include <pagmo/problems/wfg.hpp>
 #include <pagmo/problems/zdt.hpp>
 #include <pagmo/types.hpp>
 
@@ -88,9 +90,11 @@ void expose_problems_1()
     auto rb = expose_problem_pygmo<rosenbrock>("rosenbrock", rosenbrock_docstring().c_str());
     rb.def(bp::init<vector_double::size_type>((bp::arg("dim"))));
     rb.def("best_known", &best_known_wrapper<rosenbrock>, problem_get_best_docstring("Rosenbrock").c_str());
+
     // MINLP-Rastrigin.
     auto minlp_rastr = expose_problem_pygmo<minlp_rastrigin>("minlp_rastrigin", minlp_rastrigin_docstring().c_str());
     minlp_rastr.def(bp::init<unsigned, unsigned>((bp::arg("dim_c") = 1u, bp::arg("dim_i") = 1u)));
+
     // Rastrigin.
     auto rastr = expose_problem_pygmo<rastrigin>("rastrigin", "__init__(dim = 1)\n\nThe Rastrigin problem.\n\n"
                                                               "See :cpp:class:`pagmo::rastrigin`.\n\n");
@@ -108,6 +112,12 @@ void expose_problems_1()
     zdt_p.def("p_distance", lcast([](const zdt &z, const bp::object &x) { return z.p_distance(to_vd(x)); }));
     zdt_p.def("p_distance", lcast([](const zdt &z, const population &pop) { return z.p_distance(pop); }),
               zdt_p_distance_docstring().c_str());
+
+    // Golomb Ruler
+    auto gr = expose_problem_pygmo<golomb_ruler>("golomb_ruler",
+                                                 "__init__(order, upper_bound)\n\nThe Golomb Ruler Problem.\n\n"
+                                                 "See :cpp:class:`pagmo::golomb_ruler`.\n\n");
+    gr.def(bp::init<unsigned, unsigned>((bp::arg("order"), bp::arg("upper_bound"))));
 
 #if defined(PAGMO_ENABLE_CEC2013)
     // See the explanation in pagmo/config.hpp.
@@ -146,5 +156,9 @@ void expose_problems_1()
                  bp::make_function(lcast([](unconstrain &udp) -> problem & { return udp.get_inner_problem(); }),
                                    bp::return_internal_reference<>()),
                  generic_udp_inner_problem_docstring().c_str());
+    // WFG.
+    auto wfg_p = expose_problem_pygmo<wfg>("wfg", wfg_docstring().c_str());
+    wfg_p.def(bp::init<unsigned, vector_double::size_type, vector_double::size_type, vector_double::size_type>(
+        (bp::arg("prob_id") = 1u, bp::arg("dim_dvs") = 5u, bp::arg("dim_obj") = 3u, bp::arg("dim_k") = 4u)));
 }
 } // namespace pygmo

@@ -1,6 +1,138 @@
 Changelog
 =========
 
+2.11 (2019-08-07)
+-----------------
+
+New
+~~~
+
+- NSGA2 can optionally use the batch fitness evaluation framework
+  (`#308 <https://github.com/esa/pagmo2/pull/308>`__).
+
+- Implement the WFG test suite
+  (`#298 <https://github.com/esa/pagmo2/pull/298>`__).
+
+- Migration framework
+  (`#296 <https://github.com/esa/pagmo2/pull/296>`__).
+
+- Various additions to the C++ API of user-defined classes
+  (`#294 <https://github.com/esa/pagmo2/pull/294>`__).
+
+- Ipopt is now included in the linux pip packages (`#293 <https://github.com/esa/pagmo2/pull/293>`__).
+
+- Implement an ``uninstall`` target in the build system when using the CMake
+  ``Unix Makefiles`` generator (`#282 <https://github.com/esa/pagmo2/pull/282>`__).
+
+- Implement the Grey Wolf Optimizer algorithm (`#268 <https://github.com/esa/pagmo2/pull/268>`__).
+
+- Add CircleCI to the continuous integration pipeline (`#266 <https://github.com/esa/pagmo2/pull/266>`__).
+
+- Implement the Extended Ant Colony Optimization algorithm (`#249 <https://github.com/esa/pagmo2/pull/249>`__).
+
+- Implement the Lennard-Jones and Golomb ruler problems (`#247 <https://github.com/esa/pagmo2/pull/247>`__).
+
+- Batch fitness evaluation framework (`#226 <https://github.com/esa/pagmo2/pull/226>`__).
+
+Changes
+~~~~~~~
+
+- Various improvements to the MinGW pip packages: the toolchain
+  and the dependencies have
+  been updated, support for Python 3.7 has been added (`#292 <https://github.com/esa/pagmo2/pull/292>`__).
+
+- **BREAKING**: unconditionally disable the CEC2013/CEC2014 problem suites on
+  OSX and MinGW, as they cause build
+  issues (`#266 <https://github.com/esa/pagmo2/pull/266>`__, `#292 <https://github.com/esa/pagmo2/pull/292>`__).
+
+- **BREAKING**: the serialization backend was switched from the
+  Cereal library to the Boost.serialization library. This change has
+  no consequences
+  for Python users, nor for C++ users who use pagmo's CMake machinery.
+  For those C++ users who don't use CMake,
+  this means that in order to use pagmo it is now necessary to link
+  to the Boost.serialization library (`#278 <https://github.com/esa/pagmo2/pull/278>`__).
+
+- **BREAKING**: pagmo is not any more a header-only library, it has now
+  a compiled component. This change has no consequences
+  for Python users, nor for C++ users who use pagmo's CMake machinery.
+  For those C++ users who don't use CMake,
+  this means that in order to use pagmo it is now necessary to link
+  to a compiled library (`#278 <https://github.com/esa/pagmo2/pull/278>`__).
+
+- Various performance improvements in the :cpp:class:`~pagmo::population` API (`#250 <https://github.com/esa/pagmo2/pull/250>`__).
+
+- **BREAKING**: :class:`pygmo.problem` and :class:`pygmo.algorithm`
+  cannot be used as UDPs and UDAs any more.
+  This change makes the behaviour of pygmo consistent with the behaviour of pagmo (`#248 <https://github.com/esa/pagmo2/pull/248>`__).
+
+Fix
+~~~
+
+- Fix a bug in pygmo's plotting utils (`#330 <https://github.com/esa/pagmo2/pull/330>`__).
+
+- Fix a bug in PSO's error handling (`#323 <https://github.com/esa/pagmo2/pull/323>`__).
+
+- Fix a bug in MOEA/D when ``m_neighbours<2`` (`#320 <https://github.com/esa/pagmo2/pull/320>`__).
+
+- Fix type mismatches in the constrained/MO utils (`#315 <https://github.com/esa/pagmo2/pull/315>`__).
+
+- Fix a potential deadlock when setting/getting an island's
+  population/algorithm (`#309 <https://github.com/esa/pagmo2/pull/309>`__).
+
+- Fix a build failure when pagmo is configured without Eigen3 (`#281 <https://github.com/esa/pagmo2/pull/281>`__).
+
+- Fix a build failure in the Ipopt algorithm wrapper when using the Debian/Ubuntu Ipopt packages (`#266 <https://github.com/esa/pagmo2/pull/266>`__).
+
+- Fix a few test suite build failures in debug mode when using recent Clang versions (`#266 <https://github.com/esa/pagmo2/pull/266>`__).
+
+- Fix the behaviour of NSGA2 and MOEAD when the problem has equal lower/upper bounds (`#244 <https://github.com/esa/pagmo2/pull/244>`__).
+
+- Various documentation, build system and unit testing fixes/improvements (`#243 <https://github.com/esa/pagmo2/pull/243>`__,
+  `#245 <https://github.com/esa/pagmo2/pull/245>`__, `#248 <https://github.com/esa/pagmo2/pull/248>`__,
+  `#257 <https://github.com/esa/pagmo2/pull/257>`__, `#262 <https://github.com/esa/pagmo2/pull/262>`__,
+  `#265 <https://github.com/esa/pagmo2/pull/265>`__, `#266 <https://github.com/esa/pagmo2/pull/266>`__,
+  `#279 <https://github.com/esa/pagmo2/pull/279>`__, `#287 <https://github.com/esa/pagmo2/pull/287>`__,
+  `#288 <https://github.com/esa/pagmo2/pull/288>`__, `#327 <https://github.com/esa/pagmo2/pull/327>`__,
+  `#328 <https://github.com/esa/pagmo2/pull/328>`__).
+
+- The :cpp:class:`~pagmo::fork_island` UDI now properly cleans up zombie processes (`#242 <https://github.com/esa/pagmo2/pull/242>`__).
+
+2.10 (2019-01-02)
+-----------------
+
+New
+~~~
+
+- Enable the ``py27m`` build variant for the manylinux packages (`#239 <https://github.com/esa/pagmo2/pull/239>`__).
+
+- It is now possible to select a serialization backend other than cloudpickle. The other available
+  backends are the standard :mod:`pickle` module and `dill <https://pypi.org/project/dill/>`__
+  (`#229 <https://github.com/esa/pagmo2/pull/229>`__).
+
+- The Python multiprocessing island :class:`~pygmo.mp_island` can now optionally spawn a new process for each
+  evolution, rather than using a process pool (`#221 <https://github.com/esa/pagmo2/pull/221>`__).
+
+- Python user-defined classes can now be extracted from their type-erased containers using the
+  Python :class:`object` type (`#219 <https://github.com/esa/pagmo2/pull/219>`__). This allows extraction
+  without knowing the exact type of the object being extracted.
+
+Fix
+~~~
+
+- Avoid linking pygmo to the Python library on OSX with clang. This may fix the ``Fatal Python error: take_gil: NULL tstate``
+  errors which are occasionally reported by users (`#230 <https://github.com/esa/pagmo2/pull/230>`__).
+
+- Correct the detection of the Boost libraries' version in the build system (`#230 <https://github.com/esa/pagmo2/pull/230>`__).
+
+- The Python multiprocessing island :class:`~pygmo.mp_island` should now be more robust with respect
+  to serialization errors in problems/algorithms (`#229 <https://github.com/esa/pagmo2/pull/229>`__).
+
+- Tentative fix for a pygmo build failure in Cygwin (`#221 <https://github.com/esa/pagmo2/pull/221>`__).
+
+- Various documentation fixes and enhancements (`#217 <https://github.com/esa/pagmo2/pull/217>`__, `#218 <https://github.com/esa/pagmo2/pull/218>`__,
+  `#220 <https://github.com/esa/pagmo2/pull/220>`__, `#221 <https://github.com/esa/pagmo2/pull/221>`__).
+
 2.9 (2018-08-31)
 ----------------
 

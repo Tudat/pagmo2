@@ -16,6 +16,10 @@ we suggest to follow the tutorials / examples.
   population
   island
   archipelago
+  bfe
+  topology
+  r_policy
+  s_policy
 
 Implemented algorithms
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -29,6 +33,8 @@ Implemented algorithms
   algorithms/compass_search
   algorithms/de
   algorithms/de1220
+  algorithms/gaco
+  algorithms/gwo
   algorithms/ihs
   algorithms/ipopt
   algorithms/moead
@@ -56,7 +62,9 @@ Implemented problems
   problems/rastrigin
   problems/schwefel
   problems/ackley
+  problems/golomb_ruler
   problems/griewank
+  problems/lennard_jones
   problems/zdt
   problems/dtlz
   problems/hock_schittkowsky_71
@@ -70,6 +78,7 @@ Implemented problems
   problems/cec2013
   problems/cec2014
   problems/unconstrain
+  problems/wfg
 
 Implemented islands
 ^^^^^^^^^^^^^^^^^^^
@@ -79,6 +88,40 @@ Implemented islands
 
   islands/thread_island
   islands/fork_island
+
+Implemented batch evaluators
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+  :maxdepth: 1
+
+  batch_evaluators/default_bfe
+  batch_evaluators/thread_bfe
+  batch_evaluators/member_bfe
+
+Implemented topologies
+^^^^^^^^^^^^^^^^^^^^^^
+.. toctree::
+  :maxdepth: 1
+
+  topologies/unconnected
+  topologies/fully_connected
+  topologies/base_bgl_topology
+  topologies/ring
+
+Implemented replacement policies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. toctree::
+  :maxdepth: 1
+
+  r_policies/fair_replace
+
+Implemented selection policies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. toctree::
+  :maxdepth: 1
+
+  s_policies/select_best
 
 Utilities
 ^^^^^^^^^

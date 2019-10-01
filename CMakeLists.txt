@@ -34,7 +34,7 @@ if((NOT PAGMO_BUILD_PAGMO) AND (NOT PAGMO_BUILD_PYGMO))
 endif()
 
 # Main pagmo/pygmo project version.
-set(PAGMO_PROJECT_VERSION 2.9)
+set(PAGMO_PROJECT_VERSION 2.11)
 
 
 if(PAGMO_BUILD_PAGMO)
@@ -61,14 +61,11 @@ if(PAGMO_BUILD_PAGMO)
     # Detect if we can enable the fork_island UDI.
     include(CheckIncludeFileCXX)
     include(CheckCXXSymbolExists)
-    include(CMakePushCheckState)
     CHECK_INCLUDE_FILE_CXX("sys/types.h" PAGMO_HAVE_SYS_TYPES_H)
+    CHECK_INCLUDE_FILE_CXX("sys/wait.h" PAGMO_HAVE_SYS_WAIT_H)
     CHECK_INCLUDE_FILE_CXX("unistd.h" PAGMO_HAVE_UNISTD_H)
-    cmake_push_check_state(RESET)
-    set(CMAKE_REQUIRED_DEFINITIONS -D_POSIX_C_SOURCE=1)
     CHECK_CXX_SYMBOL_EXISTS(fork "unistd.h;sys/types.h" PAGMO_HAVE_FORK_SYSCALL)
-    cmake_pop_check_state()
-    if(PAGMO_HAVE_SYS_TYPES_H AND PAGMO_HAVE_UNISTD_H AND PAGMO_HAVE_FORK_SYSCALL)
+    if(PAGMO_HAVE_SYS_TYPES_H AND PAGMO_HAVE_SYS_WAIT_H AND PAGMO_HAVE_UNISTD_H AND PAGMO_HAVE_FORK_SYSCALL)
         message(STATUS "The fork_island UDI will be available.")
         set(PAGMO_WITH_FORK_ISLAND YES)
         set(PAGMO_ENABLE_FORK_ISLAND "#define PAGMO_WITH_FORK_ISLAND")
@@ -93,7 +90,7 @@ include(YACMAThreadingSetup)
 # Assemble the flags.
 set(PAGMO_CXX_FLAGS_DEBUG ${YACMA_CXX_FLAGS} ${YACMA_CXX_FLAGS_DEBUG} ${YACMA_THREADING_CXX_FLAGS})
 set(PAGMO_CXX_FLAGS_RELEASE ${YACMA_CXX_FLAGS} ${YACMA_THREADING_CXX_FLAGS})
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND YACMA_COMPILER_IS_CLANGXX)
+if(APPLE AND YACMA_COMPILER_IS_CLANGXX)
   message(STATUS "Clang compiler on OSX detected, setting the standard library to 'libc++'.")
   list(APPEND PAGMO_CXX_FLAGS_DEBUG "-stdlib=libc++")
   list(APPEND PAGMO_CXX_FLAGS_RELEASE "-stdlib=libc++")
@@ -101,16 +98,21 @@ endif()
 if(YACMA_COMPILER_IS_MSVC)
   # Disable the idiotic minmax macros on MSVC, some annoying warnings,
   # and enable the bigobj option.
-  list(APPEND PAGMO_CXX_FLAGS_DEBUG "-DNOMINMAX" "/wd4459" "/wd4127" "/bigobj")
-  list(APPEND PAGMO_CXX_FLAGS_RELEASE "-DNOMINMAX" "/wd4459" "/wd4127" "/bigobj")
-endif()
-if(YACMA_COMPILER_IS_INTELXX)
-  # NOTE: on MSVC we use the push/pop pragmas, but they do not seem to work on Intel (the pragmas
-  # in icc influence the behaviour at instantiation point, not at definition point).
-  # These warnings are useful in principle, but they are generated a lot from cereal and we have no
-  # way of disabling them selectively. Just rely on the other compilers to provde good diagnostic.
-  list(APPEND PAGMO_CXX_FLAGS_DEBUG "-diag-disable" "2259,1682,68")
-  list(APPEND PAGMO_CXX_FLAGS_RELEASE "-diag-disable" "2259,1682,68")
+#<<<<<<< HEAD
+#  list(APPEND PAGMO_CXX_FLAGS_DEBUG "-DNOMINMAX" "/wd4459" "/wd4127" "/bigobj")
+#  list(APPEND PAGMO_CXX_FLAGS_RELEASE "-DNOMINMAX" "/wd4459" "/wd4127" "/bigobj")
+#endif()
+#if(YACMA_COMPILER_IS_INTELXX)
+#  # NOTE: on MSVC we use the push/pop pragmas, but they do not seem to work on Intel (the pragmas
+#  # in icc influence the behaviour at instantiation point, not at definition point).
+#  # These warnings are useful in principle, but they are generated a lot from cereal and we have no
+#  # way of disabling them selectively. Just rely on the other compilers to provde good diagnostic.
+#  list(APPEND PAGMO_CXX_FLAGS_DEBUG "-diag-disable" "2259,1682,68")
+#  list(APPEND PAGMO_CXX_FLAGS_RELEASE "-diag-disable" "2259,1682,68")
+#=======
+  list(APPEND PAGMO_CXX_FLAGS_DEBUG "-DNOMINMAX" "/wd4459" "/wd4127" "/wd4702" "/wd4251" "/bigobj")
+  list(APPEND PAGMO_CXX_FLAGS_RELEASE "-DNOMINMAX" "/wd4459" "/wd4127" "/wd4702" "/wd4251" "/bigobj")
+#>>>>>>> v2.11
 endif()
 if(MINGW)
 	# Flag needed to deal with big binaries in MinGW.
@@ -122,6 +124,9 @@ endif()
 if(PAGMO_BUILD_PAGMO)
     # pagmo dependencies.
 
+    # TBB.
+    find_package(TBB REQUIRED)
+
     # Eigen3
     if(PAGMO_WITH_EIGEN3)
         find_package(Eigen3 REQUIRED)
@@ -132,7 +137,14 @@ if(PAGMO_BUILD_PAGMO)
 
     # NLopt
     if(PAGMO_WITH_NLOPT)
-        find_package(NLOPT REQUIRED)
+        #find_package(NLOPT REQUIRED)
+        set(NLOPT_LIBRARY "/home/dominic/Software/tudatBundleTest/tudatBundle/nlopt/lib/libnlopt.a")
+        set(NLOPT_INCLUDE_DIR "/home/dominic/Software/tudatBundleTest/tudatBundle/nlopt")
+
+        add_library(NLOPT::nlopt UNKNOWN IMPORTED)
+        set_target_properties(NLOPT::nlopt PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${NLOPT_INCLUDE_DIR}")
+        set_target_properties(NLOPT::nlopt PROPERTIES IMPORTED_LINK_INTERFACE_LANGUAGES "C" IMPORTED_LOCATION "${NLOPT_LIBRARY}")
+
         message(STATUS "NLopt include directory: ${NLOPT_INCLUDE_DIR}")
         message(STATUS "NLopt library: ${NLOPT_LIBRARY}")
     endif()
@@ -142,6 +154,12 @@ if(PAGMO_BUILD_PAGMO)
         find_package(IPOPT REQUIRED)
         message(STATUS "Ipopt include directory: ${IPOPT_INCLUDE_DIR}")
         message(STATUS "Ipopt library: ${IPOPT_LIBRARY}")
+    endif()
+
+    if(PAGMO_BUILD_TESTS)
+        # Internal variable that will be used to tell PagmoFindBoost to locate the
+        # Boost unit test framework, if tests are required.
+        set(_PAGMO_FIND_BOOST_UNIT_TEST_FRAMEWORK TRUE)
     endif()
 endif()
 
@@ -167,29 +185,181 @@ endif()
 include(PagmoFindBoost)
 
 if(PAGMO_BUILD_PAGMO)
-    # Setup of the header-only pagmo library.
-    add_library(pagmo INTERFACE)
-    target_link_libraries(pagmo INTERFACE Threads::Threads Boost::boost)
-    target_include_directories(pagmo INTERFACE
+    # List of source files.
+    set(PAGMO_SRC_FILES
+        # Core classes.
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithm.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/population.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problem.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/bfe.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/island.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/archipelago.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/io.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/rng.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/threading.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/topology.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/r_policy.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/s_policy.cpp"
+        # UDP.
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/null_problem.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cec2006.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cec2009.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/schwefel.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/rosenbrock.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/hock_schittkowsky_71.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/inventory.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/zdt.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/dtlz.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/unconstrain.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/translate.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/decompose.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/golomb_ruler.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/lennard_jones.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/ackley.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/griewank.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/rastrigin.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/minlp_rastrigin.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/luksan_vlcek1.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/wfg.cpp"
+        # UDA.
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/null_algorithm.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/de.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/pso.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/not_population_based.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/compass_search.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/mbh.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/cstrs_self_adaptive.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/pso_gen.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/ihs.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/sade.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/bee_colony.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/sea.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/sga.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/simulated_annealing.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/moead.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/nsga2.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/gaco.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/de1220.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/gwo.cpp"
+        # UDI.
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/islands/thread_island.cpp"
+        # UDBFE.
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/batch_evaluators/default_bfe.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/batch_evaluators/member_bfe.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/batch_evaluators/thread_bfe.cpp"
+        # UDT.
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/topologies/base_bgl_topology.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/topologies/unconnected.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/topologies/fully_connected.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/topologies/ring.cpp"
+        # UDRP.
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/r_policies/fair_replace.cpp"
+        # UDSP.
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/s_policies/select_best.cpp"
+        # Utils.
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/constrained.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/discrepancy.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/generic.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/multi_objective.cpp"
+        # Detail.
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/detail/base_sr_policy.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/detail/bfe_impl.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/detail/task_queue.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/detail/prime_numbers.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/detail/gte_getter.cpp"
+    )
+
+    # Some compilers choke on the cec2013/2014 data arrays.
+    if(NOT YACMA_COMPILER_IS_MSVC AND NOT APPLE AND NOT MINGW)
+        set(PAGMO_SRC_FILES
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cec2014.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cec2014_data.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cec2013.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cec2013_data.cpp"
+            "${PAGMO_SRC_FILES}"
+        )
+    endif()
+
+    # Optional and platform-dependent bits.
+    if(PAGMO_WITH_FORK_ISLAND)
+        set(PAGMO_SRC_FILES
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/islands/fork_island.cpp"
+            "${PAGMO_SRC_FILES}"
+        )
+    endif()
+
+    if(PAGMO_WITH_EIGEN3)
+        set(PAGMO_SRC_FILES
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/cmaes.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/xnes.cpp"
+            "${PAGMO_SRC_FILES}"
+        )
+    endif()
+
+    if(PAGMO_WITH_NLOPT)
+        set(PAGMO_SRC_FILES
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/nlopt.cpp"
+            "${PAGMO_SRC_FILES}"
+        )
+    endif()
+
+    if(PAGMO_WITH_IPOPT)
+        set(PAGMO_SRC_FILES
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/ipopt.cpp"
+            "${PAGMO_SRC_FILES}"
+        )
+    endif()
+
+    # Setup of the pagmo library.
+    add_library(pagmo SHARED "${PAGMO_SRC_FILES}")
+    set_property(TARGET pagmo PROPERTY VERSION "1.0")
+    set_property(TARGET pagmo PROPERTY SOVERSION 1)
+    target_compile_options(pagmo PRIVATE "$<$<CONFIG:DEBUG>:${PAGMO_CXX_FLAGS_DEBUG}>" "$<$<CONFIG:RELEASE>:${PAGMO_CXX_FLAGS_RELEASE}>")
+    set_target_properties(pagmo PROPERTIES CXX_VISIBILITY_PRESET hidden)
+    set_target_properties(pagmo PROPERTIES VISIBILITY_INLINES_HIDDEN TRUE)
+    # Let's setup the target C++ standard, but only if the user did not provide it manually.
+    if(NOT CMAKE_CXX_STANDARD)
+        set_property(TARGET pagmo PROPERTY CXX_STANDARD 11)
+    endif()
+    set_property(TARGET pagmo PROPERTY CXX_STANDARD_REQUIRED YES)
+    set_property(TARGET pagmo PROPERTY CXX_EXTENSIONS NO)
+    # NOTE: make sure the include directories from the current build
+    # are included first, so that if there is already a pagmo installation
+    # in the prefix path we don't risk including the headers from that
+    # one instead.
+    target_include_directories(pagmo PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
         $<INSTALL_INTERFACE:include>)
 
+    # Threads.
+    target_link_libraries(pagmo PUBLIC Threads::Threads)
+
+    # Boost.
+    target_link_libraries(pagmo PUBLIC Boost::boost Boost::serialization)
+
+    # TBB.
+    target_link_libraries(pagmo PUBLIC TBB::tbb)
+
     if(PAGMO_WITH_EIGEN3)
         # Link pagmo to eigen3.
-        #target_link_libraries(pagmo INTERFACE Eigen3::eigen3)
+#<<<<<<< HEAD
+#        #target_link_libraries(pagmo INTERFACE Eigen3::eigen3)
+#=======
+#        target_link_libraries(pagmo PUBLIC Eigen3::eigen3)
+#>>>>>>> v2.11
         set(PAGMO_ENABLE_EIGEN3 "#define PAGMO_WITH_EIGEN3")
     endif()
 
     if(PAGMO_WITH_NLOPT)
         # Link pagmo to NLopt.
-        target_link_libraries(pagmo INTERFACE NLOPT::nlopt)
+        target_link_libraries(pagmo PUBLIC NLOPT::nlopt)
         set(PAGMO_ENABLE_NLOPT "#define PAGMO_WITH_NLOPT")
     endif()
 
     if(PAGMO_WITH_IPOPT)
         # Link pagmo to Ipopt.
-        target_link_libraries(pagmo INTERFACE IPOPT::ipopt)
+        target_link_libraries(pagmo PUBLIC IPOPT::ipopt)
         set(PAGMO_ENABLE_IPOPT "#define PAGMO_WITH_IPOPT")
     endif()
 
@@ -220,15 +390,24 @@ if(PAGMO_BUILD_PYGMO)
             configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tools/wheel_setup.cfg" "${CMAKE_CURRENT_BINARY_DIR}/wheel/setup.cfg" @ONLY)
         endif()
         if(MINGW)
-            configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tools/mingw_wheel_libs_python${PYTHON_VERSION_MAJOR}.txt" "${CMAKE_CURRENT_BINARY_DIR}/wheel/mingw_wheel_libs_python${PYTHON_VERSION_MAJOR}.txt" @ONLY)
+            configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tools/mingw_wheel_libs_python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}.txt" "${CMAKE_CURRENT_BINARY_DIR}/wheel/mingw_wheel_libs_python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}.txt" @ONLY)
         endif()
 	endif()
 endif()
 
 # Library installation.
 if(PAGMO_BUILD_PAGMO)
-    # Setup of the export.
-    install(TARGETS pagmo EXPORT pagmo_export)
+    # Installation of the header files.
+    install(DIRECTORY include/ DESTINATION include)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/include/pagmo/config.hpp" DESTINATION include/pagmo)
+
+    # Installation of the library.
+    install(TARGETS pagmo
+        EXPORT pagmo_export
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin
+    )
 
     # Setup of the optional deps.
     set(_PAGMO_CONFIG_OPTIONAL_DEPS)
@@ -246,15 +425,22 @@ if(PAGMO_BUILD_PAGMO)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/pagmo-config.cmake" DESTINATION "lib/cmake/pagmo")
     install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/FindEigen3.cmake" "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/FindNLOPT.cmake"
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/FindIPOPT.cmake" "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/PagmoFindBoost.cmake"
-        DESTINATION "lib/cmake/pagmo")
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/FindTBB.cmake" DESTINATION "lib/cmake/pagmo")
     install(EXPORT pagmo_export NAMESPACE Pagmo:: DESTINATION lib/cmake/pagmo)
     # Take care of versioning.
     include(CMakePackageConfigHelpers)
     write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/pagmo-config-version.cmake" VERSION ${pagmo_VERSION}
         COMPATIBILITY ExactVersion)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/pagmo-config-version.cmake" DESTINATION "lib/cmake/pagmo")
+endif()
 
-    # Do the actual library installation.
-    install(DIRECTORY include/ DESTINATION include)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/include/pagmo/config.hpp" DESTINATION include/pagmo)
+# Uninstall target
+if(NOT TARGET uninstall)
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/cmake_uninstall.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+        IMMEDIATE @ONLY)
+
+    add_custom_target(uninstall
+        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 endif()

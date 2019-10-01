@@ -26,12 +26,11 @@ You should have received copies of the GNU General Public License and the
 GNU Lesser General Public License along with the PaGMO library.  If not,
 see https://www.gnu.org/licenses/. */
 
-#include <pagmo/problem.hpp>
-
 #define BOOST_TEST_MODULE problem_test
-#include <boost/test/included/unit_test.hpp>
+//#define BOOST_TEST_DYN_LINK
+#include <boost/test/unit_test.hpp>
 
-#include <boost/lexical_cast.hpp>
+#include <initializer_list>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
@@ -40,8 +39,13 @@ see https://www.gnu.org/licenses/. */
 #include <utility>
 #include <vector>
 
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/lexical_cast.hpp>
+
 #include <pagmo/exceptions.hpp>
-#include <pagmo/serialization.hpp>
+#include <pagmo/problem.hpp>
+#include <pagmo/problems/null_problem.hpp>
+#include <pagmo/s11n.hpp>
 #include <pagmo/threading.hpp>
 #include <pagmo/types.hpp>
 
@@ -86,9 +90,9 @@ struct base_p {
     }
 
     template <typename Archive>
-    void serialize(Archive &ar)
+    void serialize(Archive &ar, unsigned)
     {
-        ar(m_nobj, m_nec, m_nic, m_ret_fit, m_lb, m_ub);
+        detail::archive(ar, m_nobj, m_nec, m_nic, m_ret_fit, m_lb, m_ub);
     }
 
     vector_double::size_type m_nobj;
@@ -120,16 +124,16 @@ struct grad_p : base_p {
     }
 
     template <typename Archive>
-    void serialize(Archive &ar)
+    void serialize(Archive &ar, unsigned)
     {
-        ar(cereal::base_class<base_p>(this), m_g, m_gs);
+        detail::archive(ar, boost::serialization::base_object<base_p>(*this), m_g, m_gs);
     }
 
     vector_double m_g;
     sparsity_pattern m_gs;
 };
 
-PAGMO_REGISTER_PROBLEM(grad_p)
+PAGMO_S11N_PROBLEM_EXPORT(grad_p)
 
 // Generates a dummy problem with arbitrary dimensions and return values
 // having the gradient implemented but overriding the has methods
@@ -153,13 +157,13 @@ struct grad_p_override : grad_p {
     }
 
     template <typename Archive>
-    void serialize(Archive &ar)
+    void serialize(Archive &ar, unsigned)
     {
-        ar(cereal::base_class<grad_p>(this));
+        ar &boost::serialization::base_object<grad_p>(*this);
     }
 };
 
-PAGMO_REGISTER_PROBLEM(grad_p_override)
+PAGMO_S11N_PROBLEM_EXPORT(grad_p_override)
 
 // Generates a dummy problem with arbitrary dimensions and return values
 // having the hessians implemented
@@ -182,16 +186,16 @@ struct hess_p : base_p {
     }
 
     template <typename Archive>
-    void serialize(Archive &ar)
+    void serialize(Archive &ar, unsigned)
     {
-        ar(cereal::base_class<base_p>(this), m_h, m_hs);
+        detail::archive(ar, boost::serialization::base_object<base_p>(*this), m_h, m_hs);
     }
 
     std::vector<vector_double> m_h;
     std::vector<sparsity_pattern> m_hs;
 };
 
-PAGMO_REGISTER_PROBLEM(hess_p)
+PAGMO_S11N_PROBLEM_EXPORT(hess_p)
 
 // Generates a dummy problem with arbitrary dimensions and return values
 // having the hessians implemented but overriding the has methods
@@ -215,13 +219,13 @@ struct hess_p_override : hess_p {
     }
 
     template <typename Archive>
-    void serialize(Archive &ar)
+    void serialize(Archive &ar, unsigned)
     {
-        ar(cereal::base_class<hess_p>(this));
+        ar &boost::serialization::base_object<hess_p>(*this);
     }
 };
 
-PAGMO_REGISTER_PROBLEM(hess_p_override)
+PAGMO_S11N_PROBLEM_EXPORT(hess_p_override)
 
 // Generates a dummy problem with arbitrary dimensions and return values
 // having the hessians and the gradients implemented
@@ -245,16 +249,16 @@ struct full_p : grad_p {
     }
 
     template <typename Archive>
-    void serialize(Archive &ar)
+    void serialize(Archive &ar, unsigned)
     {
-        ar(cereal::base_class<grad_p>(this), m_h, m_hs);
+        detail::archive(ar, boost::serialization::base_object<grad_p>(*this), m_h, m_hs);
     }
 
     std::vector<vector_double> m_h;
     std::vector<sparsity_pattern> m_hs;
 };
 
-PAGMO_REGISTER_PROBLEM(full_p)
+PAGMO_S11N_PROBLEM_EXPORT(full_p)
 
 struct empty {
     vector_double fitness(const vector_double &) const
@@ -692,6 +696,8 @@ BOOST_AUTO_TEST_CASE(problem_getters_test)
     BOOST_CHECK((p1.get_c_tol() == vector_double{0., 0., 0., 0., 0., 0., 0.}));
     BOOST_CHECK(p1.get_nf() == 2 + 3 + 4);
     BOOST_CHECK((p1.get_bounds() == std::pair<vector_double, vector_double>{{13, 13}, {17, 17}}));
+    BOOST_CHECK((p1.get_lb() == vector_double{13, 13}));
+    BOOST_CHECK((p1.get_ub() == vector_double{17, 17}));
 
     // Making some evaluations
     auto N = 1235u;
@@ -725,14 +731,14 @@ BOOST_AUTO_TEST_CASE(problem_serialization_test)
     auto before = boost::lexical_cast<std::string>(p);
     // Now serialize, deserialize and compare the result.
     {
-        cereal::JSONOutputArchive oarchive(ss);
-        oarchive(p);
+        boost::archive::binary_oarchive oarchive(ss);
+        oarchive << p;
     }
     // Change the content of p before deserializing.
     p = problem{grad_p{}};
     {
-        cereal::JSONInputArchive iarchive(ss);
-        iarchive(p);
+        boost::archive::binary_iarchive iarchive(ss);
+        iarchive >> p;
     }
     auto after = boost::lexical_cast<std::string>(p);
     BOOST_CHECK_EQUAL(before, after);
@@ -827,11 +833,11 @@ struct s_02 {
     {
         return {{0}, {1}};
     }
-    void set_seed(unsigned int seed)
+    void set_seed(unsigned seed)
     {
         m_seed = seed;
     }
-    unsigned int m_seed = 0u;
+    unsigned m_seed = 0u;
 };
 
 struct s_03 {
@@ -851,7 +857,7 @@ struct s_03 {
     {
         return {{0}, {1}};
     }
-    void set_seed(unsigned int seed)
+    void set_seed(unsigned seed)
     {
         m_seed = seed;
     }
@@ -859,7 +865,7 @@ struct s_03 {
     {
         return false;
     }
-    unsigned int m_seed = 0u;
+    unsigned m_seed = 0u;
 };
 
 BOOST_AUTO_TEST_CASE(problem_stochastic_test)
@@ -890,7 +896,7 @@ struct extra_info_case {
     {
         return {{0}, {1}};
     }
-    void set_seed(unsigned int seed)
+    void set_seed(unsigned seed)
     {
         m_seed = seed;
     }
@@ -902,7 +908,7 @@ struct extra_info_case {
     {
         return std::to_string(m_seed);
     }
-    unsigned int m_seed = 0u;
+    unsigned m_seed = 0u;
 };
 
 BOOST_AUTO_TEST_CASE(problem_extra_info_test)
@@ -1005,7 +1011,7 @@ BOOST_AUTO_TEST_CASE(problem_feasibility_methods_test)
 BOOST_AUTO_TEST_CASE(null_problem_test)
 {
     // Problem instantiation
-    problem p{null_problem{}};
+    problem p;
     BOOST_CHECK_EQUAL(p.get_name(), "Null problem");
     // Pick a few reference points
     vector_double x1 = {1};
@@ -1040,15 +1046,15 @@ BOOST_AUTO_TEST_CASE(null_problem_serialization_test)
     auto before = boost::lexical_cast<std::string>(p);
     // Now serialize, deserialize and compare the result.
     {
-        cereal::JSONOutputArchive oarchive(ss);
-        oarchive(p);
+        boost::archive::binary_oarchive oarchive(ss);
+        oarchive << p;
     }
     // Change the content of p before deserializing.
-    p = problem{null_problem{}};
+    p = problem{};
     BOOST_CHECK_EQUAL(p.get_nobj(), 1u);
     {
-        cereal::JSONInputArchive iarchive(ss);
-        iarchive(p);
+        boost::archive::binary_iarchive iarchive(ss);
+        iarchive >> p;
     }
     auto after = boost::lexical_cast<std::string>(p);
     BOOST_CHECK_EQUAL(before, after);
@@ -1060,7 +1066,7 @@ BOOST_AUTO_TEST_CASE(null_problem_serialization_test)
 
 BOOST_AUTO_TEST_CASE(extract_test)
 {
-    problem p{null_problem{}};
+    problem p;
     BOOST_CHECK(p.is<null_problem>());
     BOOST_CHECK(!p.is<base_p>());
     BOOST_CHECK((std::is_same<null_problem *, decltype(p.extract<null_problem>())>::value));
@@ -1115,7 +1121,7 @@ struct ts3 {
 
 BOOST_AUTO_TEST_CASE(thread_safety_test)
 {
-    BOOST_CHECK(problem{null_problem{}}.get_thread_safety() == thread_safety::basic);
+    BOOST_CHECK(problem{}.get_thread_safety() == thread_safety::basic);
     BOOST_CHECK(problem{ts1{}}.get_thread_safety() == thread_safety::basic);
     BOOST_CHECK(problem{ts2{}}.get_thread_safety() == thread_safety::none);
     BOOST_CHECK(problem{ts3{}}.get_thread_safety() == thread_safety::basic);
@@ -1332,4 +1338,258 @@ BOOST_AUTO_TEST_CASE(minlp_test)
     BOOST_CHECK((problem{minlp{3u}}.get_ncx() == 0u));
     BOOST_CHECK((problem{minlp{3u}}.get_nx() == 3u));
     BOOST_CHECK_THROW(problem{minlp{5u}}, std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(increase_counter)
+{
+    problem p;
+    BOOST_CHECK(p.get_fevals() == 0u);
+    p.increment_fevals(100u);
+    BOOST_CHECK(p.get_fevals() == 100u);
+    p.increment_fevals(10u);
+    BOOST_CHECK(p.get_fevals() == 110u);
+    p.increment_fevals(0u);
+    BOOST_CHECK(p.get_fevals() == 110u);
+}
+
+struct bf_s11n {
+    vector_double fitness(const vector_double &) const
+    {
+        return {0};
+    }
+    std::pair<vector_double, vector_double> get_bounds() const
+    {
+        return {{0}, {1}};
+    }
+    vector_double batch_fitness(const vector_double &dvs) const
+    {
+        return vector_double(dvs.size(), 1.);
+    }
+    template <typename Archive>
+    void serialize(Archive &, unsigned)
+    {
+    }
+};
+
+PAGMO_S11N_PROBLEM_EXPORT(bf_s11n)
+
+BOOST_AUTO_TEST_CASE(batch_fitness)
+{
+    // Test a problem with no batch fitness.
+    problem p;
+    BOOST_CHECK(!has_batch_fitness<null_problem>::value);
+    BOOST_CHECK(!override_has_batch_fitness<null_problem>::value);
+    BOOST_CHECK(!p.has_batch_fitness());
+    BOOST_CHECK_EXCEPTION(p.batch_fitness(vector_double{1.}), not_implemented_error,
+                          [](const not_implemented_error &nie) {
+                              return boost::contains(nie.what(), "The batch_fitness() method has been invoked, but it "
+                                                                 "is not implemented in a UDP of type 'Null problem'");
+                          });
+
+    // A UDP which provides batch_fitness().
+    struct bf0 {
+        vector_double fitness(const vector_double &) const
+        {
+            return {0};
+        }
+        std::pair<vector_double, vector_double> get_bounds() const
+        {
+            return {{0}, {1}};
+        }
+        vector_double batch_fitness(const vector_double &dvs) const
+        {
+            return vector_double(dvs.size(), 1.);
+        }
+    };
+    p = problem{bf0{}};
+    BOOST_CHECK(has_batch_fitness<bf0>::value);
+    BOOST_CHECK(!override_has_batch_fitness<bf0>::value);
+    BOOST_CHECK(p.has_batch_fitness());
+    BOOST_CHECK(p.batch_fitness({1., 2., 3.}) == vector_double(3, 1.));
+
+    // A UDP which provides batch_fitness(), 2-dimensional.
+    struct bf1 {
+        vector_double fitness(const vector_double &) const
+        {
+            return {0};
+        }
+        std::pair<vector_double, vector_double> get_bounds() const
+        {
+            return {{0, 0}, {1, 1}};
+        }
+        vector_double batch_fitness(const vector_double &dvs) const
+        {
+            return vector_double(dvs.size() / 2u, 1.);
+        }
+    };
+
+    p = problem{bf1{}};
+    BOOST_CHECK(has_batch_fitness<bf1>::value);
+    BOOST_CHECK(!override_has_batch_fitness<bf1>::value);
+    BOOST_CHECK(p.has_batch_fitness());
+    BOOST_CHECK(p.batch_fitness({1., 2., 3., 4.}) == vector_double(2, 1.));
+    // Check throw on wrong input vector.
+    BOOST_CHECK_EXCEPTION(
+        p.batch_fitness(vector_double{1.}), std::invalid_argument, [](const std::invalid_argument &ia) {
+            return boost::contains(
+                ia.what(),
+                "Invalid argument for a batch fitness evaluation: the length of the vector "
+                "representing the decision vectors, 1, is not an exact multiple of the dimension of the problem, 2");
+        });
+
+    // A UDP which provides batch_fitness(), but with wrong retval.
+    struct bf2 {
+        vector_double fitness(const vector_double &) const
+        {
+            return {0, 0};
+        }
+        std::pair<vector_double, vector_double> get_bounds() const
+        {
+            return {{0}, {1}};
+        }
+        vector_double batch_fitness(const vector_double &dvs) const
+        {
+            return vector_double(dvs.size(), 1.);
+        }
+        vector_double::size_type get_nobj() const
+        {
+            return 2;
+        }
+    };
+    p = problem{bf2{}};
+    BOOST_CHECK(has_batch_fitness<bf2>::value);
+    BOOST_CHECK(!override_has_batch_fitness<bf2>::value);
+    BOOST_CHECK(p.has_batch_fitness());
+    BOOST_CHECK_EXCEPTION(
+        p.batch_fitness(vector_double{1.}), std::invalid_argument, [](const std::invalid_argument &ia) {
+            return boost::contains(ia.what(),
+                                   "An invalid result was produced by a batch fitness evaluation: the length of "
+                                   "the vector representing the fitness vectors, 1, is not an exact multiple of the "
+                                   "fitness dimension of the problem, 2");
+        });
+
+    // A UDP which provides batch_fitness(), but with wrong number of fvs.
+    struct bf3 {
+        vector_double fitness(const vector_double &) const
+        {
+            return {};
+        }
+        std::pair<vector_double, vector_double> get_bounds() const
+        {
+            return {{0}, {1}};
+        }
+        vector_double batch_fitness(const vector_double &) const
+        {
+            return vector_double{};
+        }
+    };
+    p = problem{bf3{}};
+    BOOST_CHECK(has_batch_fitness<bf3>::value);
+    BOOST_CHECK(!override_has_batch_fitness<bf3>::value);
+    BOOST_CHECK(p.has_batch_fitness());
+    BOOST_CHECK_EXCEPTION(
+        p.batch_fitness(vector_double{1.}), std::invalid_argument, [](const std::invalid_argument &ia) {
+            return boost::contains(ia.what(),
+                                   "An invalid result was produced by a batch fitness evaluation: the number of "
+                                   "produced fitness vectors, 0, differs from the number of input decision vectors, 1");
+        });
+
+    // A UDP which provides has_batch_fitness(), but no batch_fitness().
+    struct bf4 {
+        vector_double fitness(const vector_double &) const
+        {
+            return {0.};
+        }
+        std::pair<vector_double, vector_double> get_bounds() const
+        {
+            return {{0}, {1}};
+        }
+        bool has_batch_fitness() const
+        {
+            return true;
+        }
+    };
+    p = problem{bf4{}};
+    BOOST_CHECK(!has_batch_fitness<bf4>::value);
+    BOOST_CHECK(override_has_batch_fitness<bf4>::value);
+    BOOST_CHECK_EXCEPTION(p.batch_fitness(vector_double{1.}), not_implemented_error,
+                          [](const not_implemented_error &nie) {
+                              return boost::contains(nie.what(), "The batch_fitness() method has been invoked, but it "
+                                                                 "is not implemented in a UDP of type");
+                          });
+
+    // A UDP which provides has_batch_fitness() and batch_fitness().
+    struct bf5 {
+        vector_double fitness(const vector_double &) const
+        {
+            return {0};
+        }
+        std::pair<vector_double, vector_double> get_bounds() const
+        {
+            return {{0}, {1}};
+        }
+        vector_double batch_fitness(const vector_double &dvs) const
+        {
+            return vector_double(dvs.size(), 1.);
+        }
+        bool has_batch_fitness() const
+        {
+            return false;
+        }
+    };
+    p = problem{bf5{}};
+    BOOST_CHECK(has_batch_fitness<bf5>::value);
+    BOOST_CHECK(override_has_batch_fitness<bf5>::value);
+    BOOST_CHECK(!p.has_batch_fitness());
+    BOOST_CHECK(p.batch_fitness({1., 2., 3.}) == vector_double(3, 1.));
+    // Check the counter as well.
+    BOOST_CHECK(p.get_fevals() == 3u);
+
+    // Serialization check.
+    p = problem{bf_s11n{}};
+    BOOST_CHECK(p.has_batch_fitness());
+    std::stringstream ss;
+    auto before = boost::lexical_cast<std::string>(p);
+    // Now serialize, deserialize and compare the result.
+    {
+        boost::archive::binary_oarchive oarchive(ss);
+        oarchive << p;
+    }
+    // Change the content of p before deserializing.
+    p = problem{};
+    BOOST_CHECK(!p.has_batch_fitness());
+    {
+        boost::archive::binary_iarchive iarchive(ss);
+        iarchive >> p;
+    }
+    auto after = boost::lexical_cast<std::string>(p);
+    BOOST_CHECK_EQUAL(before, after);
+    BOOST_CHECK(p.has_batch_fitness());
+}
+
+BOOST_AUTO_TEST_CASE(is_valid)
+{
+    problem p0;
+    BOOST_CHECK(p0.is_valid());
+    problem p1(std::move(p0));
+    BOOST_CHECK(!p0.is_valid());
+    p0 = problem{full_p{}};
+    BOOST_CHECK(p0.is_valid());
+    p1 = std::move(p0);
+    BOOST_CHECK(!p0.is_valid());
+    p0 = problem{full_p{}};
+    BOOST_CHECK(p0.is_valid());
+}
+
+BOOST_AUTO_TEST_CASE(generic_assignment)
+{
+    problem p0;
+    BOOST_CHECK(p0.is<null_problem>());
+    BOOST_CHECK(&(p0 = full_p{}) == &p0);
+    BOOST_CHECK(p0.is_valid());
+    BOOST_CHECK(p0.is<full_p>());
+    BOOST_CHECK((!std::is_assignable<problem, void>::value));
+    BOOST_CHECK((!std::is_assignable<problem, int &>::value));
+    BOOST_CHECK((!std::is_assignable<problem, const int &>::value));
+    BOOST_CHECK((!std::is_assignable<problem, int &&>::value));
 }

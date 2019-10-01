@@ -26,10 +26,12 @@ You should have received copies of the GNU General Public License and the
 GNU Lesser General Public License along with the PaGMO library.  If not,
 see https://www.gnu.org/licenses/. */
 
-#define BOOST_TEST_MODULE mo_utilities_test
+#define BOOST_TEST_MODULE multi_objective_test
+//#define BOOST_TEST_DYN_LINK
+#include <boost/test/unit_test.hpp>
 
-#include <boost/test/included/unit_test.hpp>
 #include <numeric>
+#include <random>
 #include <stdexcept>
 #include <tuple>
 
@@ -326,7 +328,7 @@ void check_weights(const std::vector<std::vector<double>> &win, vector_double::s
 
 BOOST_AUTO_TEST_CASE(decomposition_weights_test)
 {
-    detail::random_engine_type r_engine(23u);
+    std::mt19937 r_engine(23u);
     // We test some throws
     // At least 2 objectives are needed
     BOOST_CHECK_THROW(decomposition_weights(1u, 5u, "grid", r_engine), std::invalid_argument);

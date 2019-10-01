@@ -27,7 +27,8 @@ GNU Lesser General Public License along with the PaGMO library.  If not,
 see https://www.gnu.org/licenses/. */
 
 #define BOOST_TEST_MODULE nsga2_test
-#include <boost/test/included/unit_test.hpp>
+//#define BOOST_TEST_DYN_LINK
+#include <boost/test/unit_test.hpp>
 
 #include <algorithm>
 #include <boost/lexical_cast.hpp>
@@ -43,7 +44,7 @@ see https://www.gnu.org/licenses/. */
 #include <pagmo/problems/inventory.hpp>
 #include <pagmo/problems/rosenbrock.hpp>
 #include <pagmo/problems/zdt.hpp>
-#include <pagmo/serialization.hpp>
+#include <pagmo/s11n.hpp>
 #include <pagmo/types.hpp>
 
 using namespace pagmo;
@@ -71,9 +72,28 @@ BOOST_AUTO_TEST_CASE(nsga2_algorithm_construction)
     BOOST_CHECK_THROW((nsga2{1u, .95, 10., 0.01, .98, 32u}), std::invalid_argument);
 }
 
+struct mo_equal_bounds {
+    /// Fitness
+    vector_double fitness(const vector_double &) const
+    {
+        return {0., 0.};
+    }
+    vector_double::size_type get_nobj() const
+    {
+        return 2u;
+    }
+    /// Problem bounds
+    std::pair<vector_double, vector_double> get_bounds() const
+    {
+        return {{0., 0.}, {1., 0.}};
+    }
+};
+
 BOOST_AUTO_TEST_CASE(nsga2_evolve_test)
 {
     // We check that the problem is checked to be suitable
+    // Some bound is equal
+    BOOST_CHECK_THROW(nsga2{10u}.evolve(population{problem{mo_equal_bounds{}}, 0u}), std::invalid_argument);
     // stochastic
     BOOST_CHECK_THROW((nsga2{}.evolve(population{inventory{}, 5u, 23u})), std::invalid_argument);
     // constrained prob
@@ -156,19 +176,19 @@ BOOST_AUTO_TEST_CASE(nsga2_serialization_test)
     auto before_log = algo.extract<nsga2>()->get_log();
     // Now serialize, deserialize and compare the result.
     {
-        cereal::JSONOutputArchive oarchive(ss);
-        oarchive(algo);
+        boost::archive::binary_oarchive oarchive(ss);
+        oarchive << algo;
     }
     // Change the content of p before deserializing.
-    algo = algorithm{null_algorithm{}};
+    algo = algorithm{};
     {
-        cereal::JSONInputArchive iarchive(ss);
-        iarchive(algo);
+        boost::archive::binary_iarchive iarchive(ss);
+        iarchive >> algo;
     }
     auto after_text = boost::lexical_cast<std::string>(algo);
     auto after_log = algo.extract<nsga2>()->get_log();
     BOOST_CHECK_EQUAL(before_text, after_text);
-    // BOOST_CHECK(before_log == after_log); // This fails because of floating point problems when using JSON and cereal
+    BOOST_CHECK(before_log == after_log);
     // so we implement a close check
     BOOST_CHECK(before_log.size() > 0u);
     for (auto i = 0u; i < before_log.size(); ++i) {
@@ -178,4 +198,35 @@ BOOST_AUTO_TEST_CASE(nsga2_serialization_test)
             BOOST_CHECK_CLOSE(std::get<2>(before_log[i])[j], std::get<2>(after_log[i])[j], 1e-8);
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE(bfe_usage_test)
+{
+    // 1 - Algorithm with bfe disabled
+    problem prob{dtlz(1, 10, 2)};
+    nsga2 uda1{nsga2{100}};
+    uda1.set_verbosity(1u);
+    uda1.set_seed(23u);
+    // 2 - Instantiate
+    algorithm algo1{uda1};
+
+    // 3 - Instantiate populations
+    population pop{prob, 24};
+    population pop1{prob, 24};
+    population pop2{prob, 24};
+
+    // 4 - Evolve the population
+    pop1 = algo1.evolve(pop);
+
+    // 5 new algorithm that is bfe enabled
+    nsga2 uda2{nsga2{100}};
+    uda2.set_verbosity(1u);
+    uda2.set_seed(23u);
+    uda2.set_bfe(bfe{}); // This will use the default bfe.
+    // 6 - Instantiate a pagmo algorithm
+    algorithm algo2{uda2};
+
+    // 7 - Evolve the population
+    pop2 = algo2.evolve(pop);
+    BOOST_CHECK(algo1.extract<nsga2>()->get_log() == algo2.extract<nsga2>()->get_log() );
 }

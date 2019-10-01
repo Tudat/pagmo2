@@ -90,6 +90,7 @@ In order to check that the UDP above is well formed we try to construct a :class
     	Tolerances on constraints: [0, 0, 0, 0, 0, ... ]
     	Lower bounds: [-5, -5, -5, -5, -5, ... ]
     	Upper bounds: [5, 5, 5, 5, 5, ... ]
+        Has batch fitness evaluation: false
     <BLANKLINE>
     	Has gradient: false
     	User implemented gradient sparsity: false
@@ -170,7 +171,7 @@ possible cases we thus fix the box bounds on the last two variables. In case :ma
 We found a feasible solution! Note that in the other 3 cases no feasible solution exists.
 
 .. note::
-   The solution strategy above is, in general, flawed in assuming the best solution of the relaxed problem is colse to the 
+   The solution strategy above is, in general, flawed in assuming the best solution of the relaxed problem is close to the
    the full MINLP problem solution. More sophisticated techniques would instead search the combinatorial part more exhaustvely.
    We used here this approach only to show how simple is, in pygmo, to define and solve the relaxed problem and
    to then feedback the optimal decision vector into a MINLP solution strategy. 

@@ -2,6 +2,8 @@ if(NLOPT_INCLUDE_DIR AND NLOPT_LIBRARY)
 	# Already in cache, be silent
 	set(NLOPT_FIND_QUIETLY TRUE)
 endif()
+ 
+message(STATUS "Nlopt directory: ${NLOPT_INCLUDE_DIR}")
 
 find_path(NLOPT_INCLUDE_DIR NAMES nlopt.h)
 find_library(NLOPT_LIBRARY NAMES nlopt)

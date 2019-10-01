@@ -73,7 +73,7 @@ class problem_test_case(_ut.TestCase):
 
     def run_basic_tests(self):
         # Tests for minimal problem, and mandatory methods.
-        from numpy import all, array
+        from numpy import all, array, ndarray, dtype
         from .core import problem, rosenbrock, null_problem
         # Def construction.
         p = problem()
@@ -141,6 +141,14 @@ class problem_test_case(_ut.TestCase):
         self.assert_(isinstance(prob.get_bounds(), tuple))
         self.assert_(all(prob.get_bounds()[0] == [0, 0]))
         self.assert_(all(prob.get_bounds()[1] == [1, 1]))
+        self.assertTrue(all(prob.get_lb() == [0, 0]))
+        self.assertTrue(all(prob.get_ub() == [1, 1]))
+        self.assertTrue(isinstance(prob.get_lb(), ndarray))
+        self.assertTrue(isinstance(prob.get_ub(), ndarray))
+        self.assertTrue(prob.get_lb().dtype == dtype('float64'))
+        self.assertTrue(prob.get_ub().dtype == dtype('float64'))
+        self.assertTrue(prob.get_lb().shape == (2,))
+        self.assertTrue(prob.get_ub().shape == (2,))
         self.assertEqual(prob.get_nx(), 2)
         self.assertEqual(prob.get_nf(), 1)
         self.assertEqual(prob.get_nec(), 0)
@@ -285,6 +293,13 @@ class problem_test_case(_ut.TestCase):
                 return (42,)
         prob = problem(p())
         self.assert_(all(prob.fitness([1, 2]) == array([42])))
+
+        # Test that construction from another pygmo.problem fails.
+        with self.assertRaises(TypeError) as cm:
+            problem(prob)
+        err = cm.exception
+        self.assertTrue(
+            "a pygmo.problem cannot be used as a UDP for another pygmo.problem (if you need to copy a problem please use the standard Python copy()/deepcopy() functions)" in str(err))
 
     def run_ctol_tests(self):
         from .core import problem
@@ -551,7 +566,7 @@ class problem_test_case(_ut.TestCase):
         self.assertRaises(ValueError, lambda: prob.fitness([1, 2]))
 
     def run_extract_tests(self):
-        from .core import problem, translate, _test_problem, decompose
+        from .core import problem, translate, _test_problem, decompose, rosenbrock
         import sys
 
         # First we try with a C++ test problem.
@@ -680,6 +695,16 @@ class problem_test_case(_ut.TestCase):
         del test_prob
         # Verify the refcount of p drops back.
         self.assert_(sys.getrefcount(p) == rc)
+
+        # Check that we can extract Python UDPs also via Python's object type.
+        p = problem(tproblem())
+        self.assertTrue(not p.extract(object) is None)
+        # Check we are referring to the same object.
+        self.assertEqual(id(p.extract(object)), id(p.extract(tproblem)))
+        # Check that it will not work with exposed C++ problems.
+        p = problem(rosenbrock())
+        self.assertTrue(p.extract(object) is None)
+        self.assertTrue(not p.extract(rosenbrock) is None)
 
     def run_nec_nic_tests(self):
         from .core import problem
@@ -1944,7 +1969,8 @@ class problem_test_case(_ut.TestCase):
                 return [42]
 
         self.assertTrue(problem(p()).get_thread_safety() == ts.none)
-        self.assertTrue(problem(rosenbrock()).get_thread_safety() == ts.basic)
+        self.assertTrue(
+            problem(rosenbrock()).get_thread_safety() == ts.constant)
         self.assertTrue(
             problem(_tu_test_problem()).get_thread_safety() == ts.none)
         self.assertTrue(
@@ -1952,7 +1978,7 @@ class problem_test_case(_ut.TestCase):
         self.assertTrue(
             problem(translate(p(), [0, 1])).get_thread_safety() == ts.none)
         self.assertTrue(
-            problem(translate(rosenbrock(), [0, 1])).get_thread_safety() == ts.basic)
+            problem(translate(rosenbrock(), [0, 1])).get_thread_safety() == ts.constant)
 
     def run_pickle_test(self):
         from .core import problem, rosenbrock, translate

@@ -85,11 +85,10 @@ std::string population_random_decision_vector_docstring()
 This method will create a random decision vector within the problem's bounds.
 
 Returns:
-    1D NumPy float array: a random decision vector within the problem’s bounds
+    :class:`numpy.ndarray`: a random decision vector within the problem's bounds
 
 Raises:
-    unspecified: any exception thrown by :func:`pygmo.problem.fitness()` or by failures at the intersection between C++ and
-      Python (e.g., type conversion errors, mismatched function signatures, etc.)
+    unspecified: any exception thrown by :func:`pygmo.random_decision_vector()`
 
 )";
 }
@@ -103,7 +102,7 @@ Index of the best individual.
 If the problem is single-objective and unconstrained, the best is simply the individual with the smallest fitness. If the problem
 is, instead, single objective, but with constraints, the best will be defined using the criteria specified in :func:`pygmo.sort_population_con()`.
 If the problem is multi-objective one single best is not well defined. In this case the user can still obtain a strict ordering of the population
-individuals by calling the :func:`pygmo.sort_population_ mo()` function.
+individuals by calling the :func:`pygmo.sort_population_mo()` function.
 
 Args:
     tol (``float`` or array-like object): scalar tolerance or vector of tolerances to be applied to each constraints. By default, the c_tol attribute 
@@ -128,7 +127,7 @@ Index of the worst individual.
 If the problem is single-objective and unconstrained, the worst is simply the individual with the largest fitness. If the problem
 is, instead, single objective, but with constraints, the worst will be defined using the criteria specified in :func:`pygmo.sort_population_con()`.
 If the problem is multi-objective one single worst is not well defined. In this case the user can still obtain a strict ordering of the population
-individuals by calling the :func:`pygmo.sort_population_ mo()` function.
+individuals by calling the :func:`pygmo.sort_population_mo()` function.
 
 Args:
     tol (``float`` or array-like object): scalar tolerance or vector of tolerances to be applied to each constraints
@@ -202,7 +201,7 @@ Sets simultaneously the :math:`i`-th individual decision vector and fitness thus
    The user must make sure that the input fitness *f* makes sense as pygmo will only check its dimension.
 
 Args:
-    i (``int``): individual’s index in the population
+    i (``int``): individual's index in the population
     x (array-like object): a decision vector (chromosome)
     f (array-like object): a fitness vector
 
@@ -229,7 +228,7 @@ individual's ID remains the same.
    A call to this method triggers one fitness function evaluation.
 
 Args:
-    i (``int``): individual’s index in the population
+    i (``int``): individual's index in the population
     x (array-like object): a decision vector (chromosome)
 
 Raises:
@@ -359,15 +358,15 @@ provides a generic interface to optimization problems.
 
 Every UDP must implement at least the following two methods:
 
-.. code-block:: python
+.. code-block::
 
    def fitness(self, dv):
      ...
    def get_bounds(self):
      ...
 
-The ``fitness()`` method is expected to return the fitness of the input decision vector (
-* concatenating the objectives, the equality and the inequality constraints), while
+The ``fitness()`` method is expected to return the fitness of the input decision vector (concatenating
+the objectives, the equality and the inequality constraints), while
 ``get_bounds()`` is expected to return the box bounds of the problem,
 :math:`(\mathbf{lb}, \mathbf{ub})`, which also implicitly define the dimension of the problem.
 The ``fitness()`` and ``get_bounds()`` methods of the UDP are accessible from the corresponding
@@ -379,7 +378,7 @@ The two mandatory methods above allow to define a single objective, deterministi
 optimization problem. In order to consider more complex cases, the UDP may implement one or more of the following
 methods:
 
-.. code-block:: python
+.. code-block::
 
    def get_nobj(self):
      ...
@@ -388,6 +387,10 @@ methods:
    def get_nic(self):
      ...
    def get_nix(self):
+     ...
+   def batch_fitness(self, dvs):
+     ...
+   def has_batch_fitness(self):
      ...
    def has_gradient(self):
      ...
@@ -427,21 +430,16 @@ Args:
 
 Raises:
     NotImplementedError: if *udp* does not implement the mandatory methods detailed above
-    ValueError: in the following cases:
-
-      * the number of objectives of the UDP is zero,
-      * the number of objectives, equality or inequality constraints is larger than an implementation-defined value,
-      * the problem bounds are invalid (e.g., they contain NaNs, the dimensionality of the lower bounds is
-        different from the dimensionality of the upper bounds, etc. - note that infinite bounds are allowed),
-      * the ``gradient_sparsity()`` and ``hessians_sparsity()`` methods of the UDP fail basic sanity checks
-        (e.g., they return vectors with repeated indices, they contain indices exceeding the problem's dimensions, etc.)
-    unspecified: any exception thrown by:
-
-      * methods of the UDP invoked during construction,
-      * the deep copy of the UDP,
-      * the constructor of the underlying C++ class,
-      * failures at the intersection between C++ and Python (e.g., type conversion errors, mismatched function
-        signatures, etc.)
+    ValueError: if the number of objectives of the UDP is zero, the number of objectives,
+      equality or inequality constraints is larger than an implementation-defined value,
+      the problem bounds are invalid (e.g., they contain NaNs, the dimensionality of the lower bounds is
+      different from the dimensionality of the upper bounds, etc. - note that infinite bounds are allowed),
+      or if the ``gradient_sparsity()`` and ``hessians_sparsity()`` methods of the UDP fail basic sanity checks
+      (e.g., they return vectors with repeated indices, they contain indices exceeding the problem's dimensions, etc.)
+    unspecified: any exception thrown by methods of the UDP invoked during construction,
+      the deep copy of the UDP, the constructor of the underlying C++ class,
+      failures at the intersection between C++ and Python (e.g., type conversion errors, mismatched function
+      signatures, etc.)
 
 )";
 }
@@ -487,8 +485,8 @@ std::string problem_get_bounds_docstring()
 
 Box-bounds.
 
-This method will invoke the ``get_bounds()`` method of the UDP to return the box-bounds
-:math:`(\mathbf{lb}, \mathbf{ub})` of the problem. Infinities in the bounds are allowed.
+This method will return the box-bounds :math:`(\mathbf{lb}, \mathbf{ub})` of the problem,
+as returned by the ``get_bounds()`` method of the UDP. Infinities in the bounds are allowed.
 
 The ``get_bounds()`` method of the UDP must return the box-bounds as a tuple of 2 elements,
 the lower bounds vector and the upper bounds vector, which must be represented as iterable Python objects (e.g.,
@@ -501,6 +499,109 @@ Returns:
 Raises:
     unspecified: any exception thrown by the invoked method of the underlying C++ class, or failures at the
       intersection between C++ and Python (e.g., type conversion errors, mismatched function signatures, etc.)
+
+)";
+}
+
+std::string problem_get_lb_docstring()
+{
+    return R"(get_lb()
+
+Lower box-bounds.
+
+This method will return the lower box-bounds for this problem. See :func:`~pygmo.problem.get_bounds()`
+for a detailed explanation of how the bounds are determined.
+
+Returns:
+    1D NumPy float array: an array representing the lower box-bounds of this problem
+
+Raises:
+    unspecified: any exception thrown by the invoked method of the underlying C++ class, or failures at the
+      intersection between C++ and Python (e.g., type conversion errors, mismatched function signatures, etc.)
+
+)";
+}
+
+std::string problem_get_ub_docstring()
+{
+    return R"(get_ub()
+
+Upper box-bounds.
+
+This method will return the upper box-bounds for this problem. See :func:`~pygmo.problem.get_bounds()`
+for a detailed explanation of how the bounds are determined.
+
+Returns:
+    1D NumPy float array: an array representing the upper box-bounds of this problem
+
+Raises:
+    unspecified: any exception thrown by the invoked method of the underlying C++ class, or failures at the
+      intersection between C++ and Python (e.g., type conversion errors, mismatched function signatures, etc.)
+
+)";
+}
+
+std::string problem_batch_fitness_docstring()
+{
+    return R"(batch_fitness(dvs)
+
+This method implements the evaluation of multiple decision vectors in batch mode
+by invoking the ``batch_fitness()`` method of the UDP. The ``batch_fitness()``
+method of the UDP accepts in input a batch of decision vectors, *dvs*, stored contiguously:
+for a problem with dimension :math:`n`, the first decision vector in *dvs* occupies
+the index range :math:`\left[0, n\right)`, the second decision vector occupies the range
+:math:`\left[n, 2n\right)`, and so on. The return value is the batch of fitness vectors *fvs*
+resulting from computing the fitness of the input decision vectors.
+*fvs* is also stored contiguously: for a problem with fitness dimension :math:`f`, the first fitness
+vector will occupy the index range :math:`\left[0, f\right)`, the second fitness vector
+will occupy the range :math:`\left[f, 2f\right)`, and so on.
+
+If the UDP provides a ``batch_fitness()`` method, this method will forward ``dvs``
+to the ``batch_fitness()`` method of the UDP after sanity checks. The output of the ``batch_fitness()``
+method of the UDP will also be checked before being returned. If the UDP does not provide a
+``batch_fitness()`` method, an error will be raised.
+
+A successful call of this method will increase the internal fitness evaluation counter
+(see :func:`~pygmo.problem.get_fevals()`).
+
+The ``batch_fitness()`` method of the UDP must be able to take as input the decision vectors as a 1D NumPy array,
+and it must return the fitness vectors as an iterable Python object (e.g., 1D NumPy array, list, tuple, etc.).
+
+Args:
+    dvs (array-like object): the decision vectors (chromosomes) to be evaluated in batch mode
+
+Returns:
+    1D NumPy float array: the fitness vectors of *dvs*
+
+Raises:
+    ValueError: if *dvs* and/or the return value are not compatible with the problem's properties
+    unspecified: any exception thrown by the ``batch_fitness()`` method of the UDP, or by failures at the intersection
+      between C++ and Python (e.g., type conversion errors, mismatched function signatures, etc.)
+
+)";
+}
+
+std::string problem_has_batch_fitness_docstring()
+{
+    return R"(has_batch_fitness()
+
+Check if the ``batch_fitness()`` method is available in the UDP.
+
+This method will return ``True`` if the ``batch_fitness()`` method is available in the UDP, ``False`` otherwise.
+
+The availability of the ``batch_fitness()`` method is determined as follows:
+
+* if the UDP does not provide a ``batch_fitness()`` method, then this method will always return ``False``;
+* if the UDP provides a ``batch_fitness()`` method but it does not provide a ``has_batch_fitness()`` method,
+  then this method will always return ``True``;
+* if the UDP provides both a ``batch_fitness()`` and a ``has_batch_fitness()`` method, then this method will return
+  the output of the ``has_batch_fitness()`` method of the UDP.
+
+The optional ``has_batch_fitness()`` method of the UDP must return a ``bool``. For information on how to
+implement the ``batch_fitness()`` method of the UDP, see :func:`~pygmo.problem.batch_fitness()`.
+
+Returns:
+    ``bool``: a flag signalling the availability of the ``batch_fitness()`` method in the UDP
 
 )";
 }
@@ -843,23 +944,19 @@ Returns:
     2D Numpy int array: the gradient sparsity pattern
 
 Raises:
-    ValueError: in the following cases:
-
-      * the NumPy array returned by the UDP does not satisfy the requirements described above (e.g., invalid
-        shape, dimensions, etc.),
-      * at least one element of the returned iterable Python object does not consist of a collection of exactly
-        2 elements,
-      * if the sparsity pattern returned by the UDP is invalid (specifically, if it is not strictly sorted lexicographically,
-        or if the indices in the pattern are incompatible with the properties of the problem, or if the size of the
-        returned pattern is different from the size recorded upon construction)
+    ValueError: if the NumPy array returned by the UDP does not satisfy the requirements described above (e.g., invalid
+      shape, dimensions, etc.),
+      at least one element of the returned iterable Python object does not consist of a collection of exactly
+      2 elements, or the sparsity pattern returned by the UDP is invalid
+      (specifically, if it is not strictly sorted lexicographically,
+      or if the indices in the pattern are incompatible with the properties of the problem, or if the size of the
+      returned pattern is different from the size recorded upon construction)
     OverflowError: if the NumPy array returned by the UDP contains integer values which are negative or outside an
       implementation-defined range
-    unspecified: any exception thrown by:
-
-      * the underlying C++ function,
-      * the ``PyArray_FROM_OTF()`` function from the NumPy C API,
-      * failures at the intersection between C++ and Python (e.g., type conversion errors, mismatched function
-        signatures, etc.)
+    unspecified: any exception thrown by the underlying C++ function,
+      the ``PyArray_FROM_OTF()`` function from the NumPy C API, or
+      failures at the intersection between C++ and Python (e.g., type conversion errors, mismatched function
+      signatures, etc.)
 
 )";
 }
@@ -987,23 +1084,18 @@ Returns:
     ``list`` of 2D Numpy int array: the hessians sparsity patterns
 
 Raises:
-    ValueError: in the following cases:
-
-      * the NumPy arrays returned by the UDP do not satisfy the requirements described above (e.g., invalid
-        shape, dimensions, etc.),
-      * at least one element of a returned iterable Python object does not consist of a collection of exactly
-        2 elements,
-      * if a sparsity pattern returned by the UDP is invalid (specifically, if it is not strictly sorted lexicographically,
-        if the indices in the pattern are incompatible with the properties of the problem or if the size of the pattern
-        differs from the size recorded upon construction)
+    ValueError: if the NumPy arrays returned by the UDP do not satisfy the requirements described above (e.g., invalid
+      shape, dimensions, etc.),
+      at least one element of a returned iterable Python object does not consist of a collection of exactly
+      2 elements, or if a sparsity pattern returned by the UDP is invalid (specifically, if it is not strictly sorted lexicographically,
+      if the indices in the pattern are incompatible with the properties of the problem or if the size of the pattern
+      differs from the size recorded upon construction)
     OverflowError: if the NumPy arrays returned by the UDP contain integer values which are negative or outside an
       implementation-defined range
-    unspecified: any exception thrown by:
-
-      * the underlying C++ function,
-      * the ``PyArray_FROM_OTF()`` function from the NumPy C API,
-      * failures at the intersection between C++ and Python (e.g., type conversion errors, mismatched function
-        signatures, etc.)
+    unspecified: any exception thrown by the underlying C++ function,
+      the ``PyArray_FROM_OTF()`` function from the NumPy C API, or
+      failures at the intersection between C++ and Python (e.g., type conversion errors, mismatched function
+      signatures, etc.)
 
 )";
 }
@@ -1111,8 +1203,6 @@ Problem's name.
 If the UDP provides a ``get_name()`` method, then this method will return the output of its ``get_name()`` method.
 Otherwise, an implementation-defined name based on the type of the UDP will be returned.
 
-The ``get_name()`` method of the UDP must return a ``str``.
-
 Returns:
     ``str``: the problem's name
 
@@ -1127,8 +1217,6 @@ Problem's extra info.
 
 If the UDP provides a ``get_extra_info()`` method, then this method will return the output of its ``get_extra_info()``
 method. Otherwise, an empty string will be returned.
-
-The ``get_extra_info()`` method of the UDP must return a ``str``.
 
 Returns:
   ``str``: extra info about the UDP
@@ -1214,7 +1302,7 @@ defined and instantiated, a UDA can then be used to construct an instance of thi
 
 Every UDA must implement at least the following method:
 
-.. code-block:: python
+.. code-block::
 
    def evolve(self, pop):
      ...
@@ -1224,7 +1312,7 @@ a new population generated by the *evolution* (or *optimisation*) of the origina
 
 Additional optional methods can be implemented in a UDA:
 
-.. code-block:: python
+.. code-block::
 
    def has_set_seed(self):
      ...
@@ -1252,13 +1340,10 @@ Args:
 
 Raises:
     NotImplementedError: if *uda* does not implement the mandatory method detailed above
-    unspecified: any exception thrown by:
-
-      * methods of the UDA invoked during construction,
-      * the deep copy of the UDA,
-      * the constructor of the underlying C++ class,
-      * failures at the intersection between C++ and Python (e.g., type conversion errors, mismatched function
-        signatures, etc.)
+    unspecified: any exception thrown by methods of the UDA invoked during construction,
+      the deep copy of the UDA, the constructor of the underlying C++ class, or
+      failures at the intersection between C++ and Python (e.g., type conversion errors, mismatched function
+      signatures, etc.)
 
 )";
 }
@@ -1389,8 +1474,6 @@ Algorithm's name.
 If the UDA provides a ``get_name()`` method, then this method will return the output of its ``get_name()`` method.
 Otherwise, an implementation-defined name based on the type of the UDA will be returned.
 
-The ``get_name()`` method of the UDA must return a ``str``.
-
 Returns:
     ``str``: the algorithm's name
 
@@ -1405,8 +1488,6 @@ Algorithm's extra info.
 
 If the UDA provides a ``get_extra_info()`` method, then this method will return the output of its ``get_extra_info()``
 method. Otherwise, an empty string will be returned.
-
-The ``get_extra_info()`` method of the UDA must return a ``str``.
 
 Returns:
   ``str``: extra info about the UDA
@@ -1836,6 +1917,29 @@ Raises:
     ValueError: if *prob_id* is not in [1..7], *fdim* is smaller than 2, *dim* is smaller or equal to *fdim*.
 
 See also the docs of the C++ class :cpp:class:`pagmo::dtlz`.
+
+)";
+}
+
+std::string wfg_docstring()
+{
+    return R"(__init__(prob_id = 1, dim_dvs = 5, dim_obj = 3, dim_k = 4)
+
+The WFG problem suite.
+
+Args:
+    prob_id (int): WFG problem id
+    dim_dvs (int): decision vector size
+    dim_obj (int): number of objectives
+    dim_k (int): position parameter
+
+Raises:
+    OverflowError: if *prob_id*, *dim_dvs*, *dim_obj* or *dim_k* are negative or greater than an implementation-defined value
+    ValueError: if *prob_id* is not in [1, ..., 9], *dim_dvs* is smaller than 1, *dim_obj* is smaller than 2, *dim_k* is
+      smaller than 1 or bigger or equal to *dim_dvs* or if *dim_k*mod(*dim_obj*-1) is different than zero. Also, when *prob_id* equals
+      to 2 or 3, if (*dim_dvs*-*dim_k*)mod(2) is different than zero.
+
+See also the docs of the C++ class :cpp:class:`pagmo::wfg`.
 
 )";
 }
@@ -2272,6 +2376,23 @@ See also the docs of the relevant C++ method :cpp:func:`pagmo::sade::get_log()`.
 )";
 }
 
+std::string nsga2_set_bfe_docstring()
+{
+    return R"(set_bfe(b)
+
+Set the batch function evaluation scheme.
+
+This method will set the batch function evaluation scheme to be used for :class:`~pygmo.nsga2`.
+
+Args:
+    b (:class:`~pygmo.bfe`): the batch function evaluation object
+
+Raises:
+    unspecified: any exception thrown by the underlying C++ method
+
+)";
+}
+
 std::string nsga2_docstring()
 {
     return R"(__init__(gen = 1, cr = 0.95, eta_c = 10, m = 0.01, eta_m = 10, seed = random)
@@ -2288,12 +2409,8 @@ Args:
 
 Raises:
     OverflowError: if *gen* or *seed* are negative or greater than an implementation-defined value
-    ValueError: if either:
-
-      * *cr* is not in [0,1[.
-      * *eta_c* is not in [0,100[.
-      * *m* is not in [0,1].
-      * *eta_m* is not in [0,100[.
+    ValueError: if either *cr* is not in [0,1[, *eta_c* is not in [0,100[, *m* is not in [0,1], or
+      *eta_m* is not in [0,100[
     
 See also the docs of the C++ class :cpp:class:`pagmo::nsga2`.
 
@@ -2336,6 +2453,198 @@ See also the docs of the relevant C++ method :cpp:func:`pagmo::nsga2::get_log`.
 )";
 }
 
+std::string gaco_set_bfe_docstring()
+{
+    return R"(set_bfe(b)
+
+Set the batch function evaluation scheme.
+
+This method will set the batch function evaluation scheme to be used for :class:`~pygmo.gaco`.
+
+Args:
+    b (:class:`~pygmo.bfe`): the batch function evaluation object
+
+Raises:
+    unspecified: any exception thrown by the underlying C++ method
+
+)";
+}
+
+std::string gaco_docstring()
+{
+    return R"(__init__(gen = 1, ker = 63, q = 1.0, oracle = 0., acc = 0.01, threshold = 1u, n_gen_mark = 7u, impstop = 100000u, evalstop = 100000u, focus = 0., memory = false, seed = random)
+
+Extended Ant Colony Optimization algorithm (gaco).
+
+Ant colony optimization is a class of optimization algorithms modeled on the actions
+of an ant colony. Artificial 'ants' (e.g. simulation agents) locate optimal solutions by
+moving through a parameter space representing all possible solutions. Real ants lay down
+pheromones directing each other to resources while exploring their environment.
+The simulated 'ants' similarly record their positions and the quality of their solutions,
+so that in later simulation iterations more ants locate better solutions.
+
+In pygmo we propose a version of this algorithm called extended ACO and originally described
+by Schlueter et al.
+Extended ACO generates future generations of ants by using the a multi-kernel gaussian distribution
+based on three parameters (i.e., pheromone values) which are computed depending on the quality
+of each previous solution. The solutions are ranked through an oracle penalty method.
+
+This algorithm can be applied to box-bounded single-objective, constrained and unconstrained
+optimization, with both continuous and integer variables.
+
+.. note::
+
+   The ACO version implemented in PaGMO is an extension of Schlueter's originally proposed extended ACO algorithm.
+   The main difference between the implemented version  and the original one lies in
+   how two of the three pheromone values are computed (in particular, the weights and the standard deviations).
+
+.. seealso::
+
+   M. Schlueter, et al. (2009). Extended ant colony optimization for non-convex mixed integer non-linear programming. Computers & Operations Research.
+
+Args:
+    gen (``int``): number of generations
+    ker (``int``): kernel size
+    q (``float``): convergence speed parameter
+    oracle (``float``): oracle parameter
+    acc (``float``): accuracy parameter
+    threshold (``int``): threshold parameter
+    n_gen_mark (``int``): std convergence speed parameter
+    impstop (``int``): improvement stopping criterion
+    evalstop (``int``): evaluation stopping criterion
+    focus (``float``): focus parameter
+    memory (``bool``): memory parameter
+    seed (``int``): seed used by the internal random number generator (default is random)
+
+Raises:
+    OverflowError: if *gen* or *seed* are negative or greater than an implementation-defined value
+    ValueError: if either *acc* is not >=0, *focus* is not >=0 or *q* is not >=0,
+      *threshold* is not in [1,gen] when gen!=0 and memory==false, or
+      *threshold* is not in >=1 when gen!=0 and memory==true
+
+See also the docs of the C++ class :cpp:class:`pagmo::gaco`.
+
+)";
+}
+
+std::string gaco_get_log_docstring()
+{
+    return R"(get_log()
+
+Returns a log containing relevant parameters recorded during the last call to ``evolve()`` and printed to screen. The log frequency depends on the verbosity
+parameter (by default nothing is logged) which can be set calling the method :func:`~pygmo.algorithm.set_verbosity()` on an :class:`~pygmo.algorithm`
+constructed with a :class:`~pygmo.gaco`. A verbosity of ``N`` implies a log line each ``N`` generations.
+
+Returns:
+    ``list`` of ``tuples``: at each logged epoch, the values ``Gen``, ``Fevals``, ``Best``, ``Kernel``, ``Oracle``, ``dx``, ``dp``, where:
+
+    * ``Gen`` (``int``), generation number
+    * ``Fevals`` (``int``), number of functions evaluation made
+    * ``Best`` (``float``), best fitness function value
+    * ``Kernel`` (``int``), kernel size
+    * ``Oracle`` (``float``), oracle parameter
+    * ``dx`` (``float``), sum of the absolute value of the difference between the variables' values of the best and worst solutions
+    * ``dp`` (``float``), absolute value of the difference between the worst and best solutions' penalty values
+
+Examples:
+    >>> import pygmo as pg
+    >>> prob = pg.problem(pg.rosenbrock(dim = 2))
+    >>> pop = pg.population(prob, size=13, seed=23)
+    >>> algo = pg.algorithm(pg.gaco(10, 13, 1.0, 1e9, 0.0, 1, 7, 100000, 100000, 0.0, False, 23))
+    >>> algo.set_verbosity(1)
+    >>> pop = algo.evolve(pop) # doctest: +SKIP
+     Gen:        Fevals:          Best:        Kernel:        Oracle:            dx:            dp:
+        1              0        179.464             13          1e+09        13.1007         649155
+        2             13        166.317             13        179.464        5.11695        15654.1
+        3             26        3.81781             13        166.317        5.40633        2299.95
+        4             39        3.81781             13        3.81781        2.11767        385.781
+        5             52        2.32543             13        3.81781        1.30415        174.982
+        6             65        2.32543             13        2.32543        4.58441         43.808
+        7             78        1.17205             13        2.32543        1.18585        21.6315
+        8             91        1.17205             13        1.17205       0.806727        12.0702
+        9            104        1.17205             13        1.17205       0.806727        12.0702
+       10            130       0.586187             13       0.586187       0.806727        12.0702
+    >>> uda = algo.extract(pg.gaco)
+    >>> uda.get_log() # doctest: +SKIP
+    [(1, 0, 179.464, 13, 1e+09, 13.1007, 649155), (2, 15, 166.317, 13, 179.464, ...
+
+See also the docs of the relevant C++ method :cpp:func:`pagmo::gaco::get_log`.
+
+)";
+}
+
+std::string gwo_docstring()
+{
+    return R"(__init__(gen = 1, seed = random)
+
+Grey Wolf Optimizer (gwo).
+
+Grey Wolf Optimizer is an optimization algorithm based on the leadership hierarchy and hunting mechanism of
+greywolves, proposed by Seyedali Mirjalilia, Seyed Mohammad Mirjalilib, Andrew Lewis in 2014.
+
+This algorithm is a classic example of a highly criticizable line of search that led in the first decades of
+our millenia to the development of an entire zoo of metaphors inspiring optimzation heuristics. In our opinion they, 
+as is the case for the grey wolf optimizer, are often but small variations of already existing heuristics rebranded with unnecessray and convoluted
+biological metaphors. In the case of GWO this is particularly evident as the position update rule is shokingly
+trivial and can also be easily seen as a product of an evolutionary metaphor or a particle swarm one. Such an update rule
+is also not particulary effective and results in a rather poor performance most of times. Reading the original
+peer-reviewed paper, where the poor algoritmic perfromance is hidden by the methodological flaws of the benchmark presented,
+one is left with a bitter opinion of the whole peer-review system.
+
+This algorithm can be applied to box-bounded single-objective, constrained and unconstrained
+optimization, with continuous value.
+
+Args:
+    gen (``int``): number of generations
+    seed (``int``): seed used by the internal random number generator (default is random)
+
+Raises:
+    OverflowError: if *gen* or *seed* are negative or greater than an implementation-defined value
+    ValueError: if *gen* is not >=3
+    
+See also the docs of the C++ class :cpp:class:`pagmo::gwo`.
+
+)";
+}
+
+std::string gwo_get_log_docstring()
+{
+    return R"(get_log()
+
+Returns a log containing relevant parameters recorded during the last call to ``evolve()`` and printed to screen. The log frequency depends on the verbosity
+parameter (by default nothing is logged) which can be set calling the method :func:`~pygmo.algorithm.set_verbosity()` on an :class:`~pygmo.algorithm`
+constructed with a :class:`~pygmo.gwo`. A verbosity of ``N`` implies a log line each ``N`` generations.
+
+Returns:
+    ``list`` of ``tuples``: at each logged epoch, the values ``Gen``, ``Fevals``, ``ideal_point``, where:
+
+    * ``Gen`` (``int``), generation number
+    * ``alpha`` (``float``), fitness function value of alpha
+    * ``beta`` (``float``), fitness function value of beta
+    * ``delta`` (``float``), fitness function value of delta
+
+Examples:
+    >>> from pygmo import *
+    >>> algo = algorithm(gwo(gen=10))
+    >>> algo.set_verbosity(2)
+    >>> prob = problem(rosenbrock(dim=2))
+    >>> pop = population(prob, size=13, seed=23)
+    >>> pop = algo.evolve(pop) # doctest: +SKIP
+    Gen:         Alpha:          Beta:         Delta:
+      1        179.464        3502.82        3964.75
+      3        6.82024        30.2149        61.1906
+      5       0.321879        2.39373        3.46188
+      7       0.134441       0.342357       0.439651
+      9       0.100281       0.211849       0.297448
+    >>> uda = algo.extract(gwo)
+    >>> uda.get_log() # doctest: +SKIP
+    [(1, 179.46420983829944, 3502.8158822203472, 3964.7542658046486), ...
+
+See also the docs of the relevant C++ method :cpp:func:`pagmo::gwo::get_log`.
+
+)";
+}
+
 std::string moead_docstring()
 {
     return R"(__init__(gen = 1, weight_generation = "grid", decomposition = "tchebycheff", neighbours = 20, CR = 1, F = 0.5, eta_m = 20, realb = 0.9, limit = 2, preserve_diversity = true, seed = random)
@@ -2357,12 +2666,9 @@ Args:
 
 Raises:
     OverflowError: if *gen*, *neighbours*, *seed* or *limit* are negative or greater than an implementation-defined value
-    ValueError: if either:
-    
-      * *decomposition* is not one of 'tchebycheff', 'weighted' or 'bi'.
-      * *weight_generation* is not one of 'random', 'low discrepancy' or 'grid'.
-      * *CR* or *F* or *realb* are not in [0.,1.] 
-      * *eta_m* is negative
+    ValueError: if either *decomposition* is not one of 'tchebycheff', 'weighted' or 'bi',
+      *weight_generation* is not one of 'random', 'low discrepancy' or 'grid',
+      *CR* or *F* or *realb* are not in [0.,1.] or *eta_m* is negative, if *neighbours* is not >=2
 
 See also the docs of the C++ class :cpp:class:`pagmo::moead`.
 
@@ -2912,27 +3218,64 @@ See also the docs of the relevant C++ method :cpp:func:`pagmo::simulated_anneali
 
 std::string random_decision_vector_docstring()
 {
-    return R"(random_decision_vector_docstring(lb, ub, nix = 0)
+    return R"(random_decision_vector(prob)
 
-Creates a random decision vector within some bounds using pygmo's global rng. If
-both the lower and upper bounds are finite numbers, then the :math:`i`-th
-component of the randomly generated pagmo::vector_double will be such that
-:math:`lb_i \le x_i < ub_i`. If :math:`lb_i == ub_i` then :math:`lb_i` is
-returned. If an integer part *nix* is specified then the last *nix* components
-are guaranteed to be integers within the specified (integer) bounds.
+This function will generate a decision vector whose values are randomly chosen with uniform probability within
+the lower and upper bounds :math:`lb` and :math:`ub` of the input :class:`~pygmo.problem` *prob*.
+
+For the continuous part of the decision vector, the :math:`i`-th component of the randomly generated decision
+vector will be such that :math:`lb_i \le x_i < ub_i`.
+
+For the discrete part of the decision vector, the :math:`i`-th component of the randomly generated decision vector
+is guaranteed to be an integral value such that :math:`lb_i \le x_i \le ub_i`.
+
+For both the continuous and discrete parts of the decision vector, if :math:`lb_i == ub_i` then :math:`lb_i` is returned.
 
 Args:
-    lb (array-like object): the lower bounds
-    ub (array-like object): the upper bounds
-    nix (``int``): the integer size
-
-Raises:
-    ValueError: if *nix* is negative or greater than an implementation-defined value
-    ValueError: if *lb* and *ub* are malformed (unequal lenght, zero size, *nix* larger than ``len(lb)`` or bounds are not integers in their last *nix* components)
-    TypeError: if *lb* or *ub* cannot be converted to a vector of floats
+    prob (:class:`~pygmo.problem`): the input problem
 
 Returns:
-    1D NumPy float array: the random decision vector
+    :class:`numpy.ndarray`: a random decision vector within the problem's bounds
+
+Raises:
+    ValueError: if the problem's bounds are not finite or larger than an implementation-defined limit
+    unspecified: any exception thrown by failures at the intersection between C++ and Python (e.g.,
+      type conversion errors, mismatched function signatures, etc.)
+
+)";
+}
+
+std::string batch_random_decision_vector_docstring()
+{
+    return R"(batch_random_decision_vector(prob, n)
+
+This function will generate a batch of *n* decision vectors whose values are randomly chosen with uniform probability within
+the lower and upper bounds :math:`lb` and :math:`ub` of the input :class:`~pygmo.problem` *prob*.
+The decision vectors are laid out contiguously in the return value: for a problem with dimension :math:`x`,
+the first decision vector in the return value occupies the index range :math:`\left[0, x\right)`, the second decision vector
+occupies the range :math:`\left[x, 2x\right)`, and so on.
+
+For the continuous parts of the decision vectors, the :math:`i`-th components of the randomly generated decision
+vectors will be such that :math:`lb_i \le x_i < ub_i`.
+
+For the discrete parts of the decision vectors, the :math:`i`-th components of the randomly generated decision vectors
+are guaranteed to be integral values such that :math:`lb_i \le x_i \le ub_i`.
+
+For both the continuous and discrete parts of the decision vectors, if :math:`lb_i == ub_i` then :math:`lb_i` is returned.
+
+Args:
+    prob (:class:`~pygmo.problem`): the input problem
+    n (int): the number of decision vectors that will be generated
+
+Returns:
+    :class:`numpy.ndarray`: a random decision vector within the problem's bounds
+
+Raises:
+    OverflowError: in case of (unlikely) overflows
+    ValueError: if the problem's bounds are not finite or larger than an implementation-defined limit
+    unspecified: any exception thrown by failures at the intersection between C++ and Python (e.g.,
+      type conversion errors, mismatched function signatures, etc.)
+
 )";
 }
 
@@ -3159,7 +3502,7 @@ Returns:
 Examples:
     >>> import pygmo as pg
     >>> pg.non_dominated_front_2d(points = [[0,5],[1,4],[2,3],[3,2],[4,1],[2,2]])
-    array([0, 1, 5, 4], dtype=uint64)
+    array([0, 1, 5, 4])
 )";
 }
 
@@ -3222,7 +3565,7 @@ Examples:
     >>> import pygmo as pg
     >>> pop = pg.population(prob = pg.dtlz(prob_id = 3, dim=10, fdim=4), size = 20)
     >>> pg.sort_population_mo(points = pop.get_f()) # doctest: +SKIP
-    array([ 4,  7, 14, 15, 16, 18,  9, 13,  5,  3,  6,  2, 12,  0,  1, 19, 17, 8, 10, 11], dtype=uint64)
+    array([ 4,  7, 14, 15, 16, 18,  9, 13,  5,  3,  6,  2, 12,  0,  1, 19, 17, 8, 10, 11])
 )";
 }
 
@@ -3255,7 +3598,7 @@ Examples:
     >>> import pygmo as pg
     >>> pop = pg.population(prob = pg.dtlz(prob_id = 3, dim=10, fdim=4), size = 20)
     >>> pg.select_best_N_mo(points = pop.get_f(), N = 13) # doctest: +SKIP
-    array([ 2,  3,  4,  5,  6,  7,  9, 12, 13, 14, 15, 16, 18], dtype=uint64)
+    array([ 2,  3,  4,  5,  6,  7,  9, 12, 13, 14, 15, 16, 18])
 )";
 }
 
@@ -3289,6 +3632,8 @@ where :math:`d_1 = (\mathbf f - \mathbf z^*) \cdot \hat {\mathbf i}_{\lambda}` ,
 :math:`d_2 = \vert (\mathbf f - \mathbf z^*) - d_1 \hat {\mathbf i}_{\lambda})\vert` , and 
 :math:`\hat {\mathbf i}_{\lambda} = \frac{\boldsymbol \lambda}{\vert \boldsymbol \lambda \vert}`
 
+Note that while `ref_point` is required, it does not impact the calculation for the `weighted` method as shown above.
+
 Args:
     objs (array-like object): the objective vectors
     weights (array-like object): the weights :math:`\boldsymbol \lambda`
@@ -3306,6 +3651,10 @@ Examples:
     >>> import pygmo as pg
     >>> pg.decompose_objectives(objs = [1,2,3], weights = [0.1,0.1,0.8], ref_point=[5,5,5], method = "weighted") # doctest: +SKIP
     array([ 2.7])
+    >>> pg.decompose_objectives(objs = [1,2,3], weights = [0.1,0.1,0.8], ref_point=[0,0,0], method = "weighted") # doctest: +SKIP
+    array([ 2.7])
+    >>> pg.decompose_objectives(objs = [1,2,3], weights = [0.1,0.1,0.8], ref_point=[5,5,5], method = "tchebycheff") # doctest: +SKIP
+    array([ 1.6])
 )";
 }
 
@@ -3406,7 +3755,7 @@ The following strict ordering is used:
 
 - :math:`f_1 \prec f_2` if :math:`f_1` is feasible and :math:`f_2` is not.
 - :math:`f_1 \prec f_2` if :math:`f_1` is they are both infeasible, but :math:`f_1`
-  violates less constraints than :math:`f_2`, or in case they both violate the same
+  violates fewer constraints than :math:`f_2`, or in case they both violate the same
   number of constraints, if the :math:`L_2` norm of the overall constraint violation
   is smaller.
 - :math:`f_1 \prec f_2` if both fitness vectors are feasible and the objective value
@@ -3424,7 +3773,7 @@ Args:
 Raises:
     OverflowError: if *nec* is negative or greater than an implementation-defined value
     ValueError: if *f1* and *f2* do not have equal size :math:`n`, if *f1* does not have at least size 1, 
-    if *neq* is larger than :math:`n-1` (too many constraints) or if the size of *tol* is not :math:`n - 1`
+      if *neq* is larger than :math:`n-1` (too many constraints) or if the size of *tol* is not :math:`n - 1`
     TypeError: if *f1*, *f2* or *tol* cannot be converted to a vector of floats
 
 Returns:
@@ -3434,6 +3783,7 @@ Examples:
     >>> import pygmo as pg
     >>> pg.compare_fc(f1 = [1,1,1], f2 = [1,2.1,-1.2], nec = 1, tol = [0]*2)
     False
+
 )";
 }
 
@@ -3448,7 +3798,7 @@ The following strict ordering is used (same as the one used in :func:`pygmo.comp
 
 - :math:`f_1 \prec f_2` if :math:`f_1` is feasible and :math:`f_2` is not.
 - :math:`f_1 \prec f_2` if :math:`f_1` is they are both infeasible, but :math:`f_1`
-  violates less constraints than :math:`f_2`, or in case they both violate the same
+  violates fewer constraints than :math:`f_2`, or in case they both violate the same
   number of constraints, if the :math:`L_2` norm of the overall constraint violation
   is smaller.
 - :math:`f_1 \prec f_2` if both fitness vectors are feasible and the objective value
@@ -3465,7 +3815,7 @@ Args:
 Raises:
     OverflowError: if *nec* is negative or greater than an implementation-defined value
     ValueError: if the input fitness vectors do not have all the same size :math:`n >=1`, or if *neq* is larger than :math:`n-1` (too many constraints)
-    or if the size of *tol* is not equal to :math:`n-1`
+      or if the size of *tol* is not equal to :math:`n-1`
     TypeError: if *input_f* cannot be converted to a vector of vector of floats or *tol* cannot be converted to a vector of floats.
 
 Returns:
@@ -3476,6 +3826,7 @@ Examples:
     >>> idxs = pg.sort_population_con(input_f = [[1.2,0.1,-1],[0.2,1.1,1.1],[2,-0.5,-2]], nec = 1, tol = [1e-8]*2)
     >>> print(idxs)
     [0 2 1]
+
 )";
 }
 
@@ -3605,7 +3956,10 @@ std::string set_global_rng_seed_docstring()
 In pygmo it is, in general, possible to control the seed of all random generators by a dedicated *seed* kwarg passed on via various
 constructors. If no *seed* is passed pygmo randomly creates a seed for you using its global random number generator. 
 
-This function allows to be able to reset the seed of auch a global random number generator. This can be useful to create a deterministic behaviour of pygmo easily. 
+This function allows to be able to reset the seed of such a global random number generator. This can be useful to create a deterministic behaviour of pygmo easily. 
+
+Args:
+    seed (int): the new global seed for random number generation
 
 .. note::
    In complex parallel evolutions obtaining a deterministic behaviour is not possible even setting the global seed as
@@ -3616,11 +3970,11 @@ Examples:
     >>> import pygmo as pg
     >>> pg.set_global_rng_seed(seed = 32)
     >>> pop = pg.population(prob = pg.ackley(5), size = 20)
-    >>> print(pop.champion_f)
+    >>> print(pop.champion_f) # doctest: +SKIP
     [17.26891503]
     >>> pg.set_global_rng_seed(seed = 32)
     >>> pop = pg.population(prob = pg.ackley(5), size = 20)
-    >>> print(pop.champion_f)
+    >>> print(pop.champion_f) # doctest: +SKIP
     [17.26891503]
     )";
 }
@@ -3905,11 +4259,13 @@ std::string island_docstring()
 {
     return R"(Island class.
 
-In the pygmo jargon, an island is a class that encapsulates three entities:
+In the pygmo jargon, an island is a class that encapsulates the following entities:
 
 * a user-defined island (**UDI**),
 * an :class:`~pygmo.algorithm`,
-* a :class:`~pygmo.population`.
+* a :class:`~pygmo.population`,
+* a replacement policy (of type :class:`~pygmo.r_policy`),
+* a selection policy (of type :class:`~pygmo.s_policy`).
 
 Through the UDI, the island class manages the asynchronous evolution (or optimisation)
 of its :class:`~pygmo.population` via the algorithm's :func:`~pygmo.algorithm.evolve()`
@@ -3923,11 +4279,16 @@ wait for pending evolutions to conclude by calling the :func:`~pygmo.island.wait
 :func:`~pygmo.island.wait_check()` methods. The status of ongoing evolutions in the island can be queried via
 the :attr:`~pygmo.island.status` attribute.
 
+The replacement and selection policies are used when the island is part of an :class:`~pygmo.archipelago`.
+They establish how individuals are selected and replaced from the island when migration across islands occurs within
+the :class:`~pygmo.archipelago`. If the island is not part of an :class:`~pygmo.archipelago`,
+the replacement and selection policies play no role.
+
 Typically, pygmo users will employ an already-available UDI in conjunction with this class (see :ref:`here <py_islands>`
 for a full list), but advanced users can implement their own UDI types. A user-defined island must implement
 the following method:
 
-.. code-block:: python
+.. code-block::
 
    def run_evolve(self, algo, pop):
      ...
@@ -3938,7 +4299,7 @@ is finished, it will return the algorithm used for the evolution and the evolved
 
 In addition to the mandatory ``run_evolve()`` method, a UDI may implement the following optional methods:
 
-.. code-block:: python
+.. code-block::
 
    def get_name(self):
      ...
@@ -3960,21 +4321,24 @@ thread safety. Specifically, ``run_evolve()`` is always called in a separate thr
 An island can be initialised in a variety of ways using keyword arguments:
 
 * if the arguments list is empty, a default :class:`~pygmo.island` is constructed, containing a
-  :class:`~pygmo.thread_island` UDI, a :class:`~pygmo.null_algorithm` algorithm and an empty
-  population with problem type :class:`~pygmo.null_problem`;
-* if the arguments list contains *algo*, *pop* and, optionally, *udi*, then the constructor will initialise
-  an :class:`~pygmo.island` containing the specified algorithm, population and UDI. If the *udi* parameter
-  is not supplied, the UDI type is chosen according to a heuristic which depends on the platform, the
-  Python version and the supplied *algo* and *pop* parameters:
+  :class:`~pygmo.thread_island` UDI, a :class:`~pygmo.null_algorithm` algorithm, an empty
+  population with problem type :class:`~pygmo.null_problem`, and default-constructed
+  :class:`~pygmo.r_policy` and :class:`~pygmo.s_policy`;
+* if the arguments list contains *algo*, *pop* and, optionally, *udi*, *r_pol* and *s_pol*, then the constructor will
+  initialise an :class:`~pygmo.island` containing the specified algorithm, population, UDI and replacement/selection
+  policies. If *r_pol* and/or *s_pol* are not supplied, the replacement/selection policies will be default-constructed.
+  If the *udi* parameter is not supplied, the UDI type is chosen according to a heuristic which depends
+  on the platform, the Python version and the supplied *algo* and *pop* parameters:
 
   * if *algo* and *pop*'s problem provide at least the :attr:`~pygmo.thread_safety.basic` thread safety guarantee,
     then :class:`~pygmo.thread_island` will be selected as UDI type;
   * otherwise, if the current platform is Windows or the Python version is at least 3.4, then :class:`~pygmo.mp_island`
     will be selected as UDI type, else :class:`~pygmo.ipyparallel_island` will be chosen;
-* if the arguments list contains *algo*, *prob*, *size* and, optionally, *udi* and *seed*, then a :class:`~pygmo.population`
-  will be constructed from *prob*, *size* and *seed*, and the construction will then proceed in the same way detailed
-  above (i.e., *algo* and the newly-created population are used to initialise the island's algorithm and population,
-  and the UDI, if not specified, will be chosen according to the heuristic detailed above).
+* if the arguments list contains *algo*, *prob*, *size* and, optionally, *udi*, *b*, *seed*, *r_pol* and *s_pol*,
+  then a :class:`~pygmo.population` will be constructed from *prob*, *size*, *b* and *seed*, and the construction will
+  then proceed in the same way detailed above (i.e., *algo* and the newly-created population are used to initialise the
+  island's algorithm and population, the UDI, if not specified, will be chosen according to the heuristic detailed above,
+  and the replacement/selection policies are given by *r_pol* and *s_pol*).
 
 If the keyword arguments list is invalid, a :exc:`KeyError` exception will be raised.
 
@@ -3989,7 +4353,7 @@ std::string island_evolve_docstring()
 
 Launch evolution.
 
-This method will evolve the island’s :class:`~pygmo.population` using the island’s :class:`~pygmo.algorithm`.
+This method will evolve the island's :class:`~pygmo.population` using the island's :class:`~pygmo.algorithm`.
 The evolution happens asynchronously: a call to :func:`~pygmo.island.evolve()` will create an evolution task that
 will be pushed to a queue, and then return immediately. The tasks in the queue are consumed by a separate thread of execution
 managed by the :class:`~pygmo.island` object. Each task will invoke the ``run_evolve()`` method of the UDI *n*
@@ -3997,18 +4361,33 @@ times consecutively to perform the actual evolution. The island's algorithm and 
 end of each ``run_evolve()`` invocation. Exceptions raised inside the tasks are stored within the island object,
 and can be re-raised by calling :func:`~pygmo.island.wait_check()`.
 
+If the island is part of an :class:`~pygmo.archipelago`, then migration of individuals to/from other
+islands might occur. The migration algorithm consists of the following steps:
+
+* before invoking ``run_evolve()`` on the UDI, the island will ask the
+  archipelago if there are candidate incoming individuals from other islands
+  If so, the replacement policy is invoked and the current population of the island is updated with the migrants;
+* ``run_evolve()`` is then invoked and the current population is evolved;
+* after ``run_evolve()`` has concluded, individuals are selected in the
+  evolved population and copied into the migration database of the archipelago
+  for future migrations.
+
 It is possible to call this method multiple times to enqueue multiple evolution tasks, which will be consumed in a FIFO (first-in
 first-out) fashion. The user may call :func:`~pygmo.island.wait()` or :func:`~pygmo.island.wait_check()` to block until all
 tasks have been completed, and to fetch exceptions raised during the execution of the tasks. The :attr:`~pygmo.island.status`
 attribute can be used to query the status of the asynchronous operations in the island.
 
 Args:
-     n (``int``): the number of times the ``run_evolve()`` method of the UDI will be called within the evolution task
+     n (int): the number of times the ``run_evolve()`` method of the UDI will be called within the evolution task
+        (this corresponds also to the number of times migration can happen, if the island belongs to an archipelago)
 
 Raises:
+    IndexError: if the island is part of an archipelago and during migration an invalid island index is used (this can
+       happen if the archipelago's topology is malformed)
     OverflowError: if *n* is negative or larger than an implementation-defined value
-    unspecified: any exception thrown by the underlying C++ method, or by failures at the intersection between C++ and
-      Python (e.g., type conversion errors, mismatched function signatures, etc.)
+    unspecified: any exception thrown by the public interface of :class:`~pygmo.archipelago`, the public interface of
+       the replacement/selection policies, the underlying C++ method, or by failures at the intersection between C++ and
+       Python (e.g., type conversion errors, mismatched function signatures, etc.)
 
 )";
 }
@@ -4140,21 +4519,6 @@ Raises:
 )";
 }
 
-std::string island_get_thread_safety_docstring()
-{
-    return R"(get_thread_safety()
-
-It is safe to call this method while the island is evolving.
-
-Returns:
-    ``tuple``: a tuple containing the :class:`~pygmo.thread_safety` levels of the island's algorithm and problem
-
-Raises:
-    unspecified: any exception thrown by the underlying C++ method
-
-)";
-}
-
 std::string island_get_name_docstring()
 {
     return R"(get_name()
@@ -4166,10 +4530,8 @@ Otherwise, an implementation-defined name based on the type of the UDI will be r
 
 It is safe to call this method while the island is evolving.
 
-The ``get_name()`` method of the UDI must return a ``str``.
-
 Returns:
-    ``str``: the name of the UDI
+    str: the name of the UDI
 
 Raises:
     unspecified: any exception thrown by the ``get_name()`` method of the UDI
@@ -4188,13 +4550,35 @@ method. Otherwise, an empty string will be returned.
 
 It is safe to call this method while the island is evolving.
 
-The ``get_extra_info()`` method of the UDI must return a ``str``.
-
 Returns:
-    ``str``: extra info about the UDI
+    str: extra info about the UDI
 
 Raises:
     unspecified: any exception thrown by the ``get_extra_info()`` method of the UDI
+
+)";
+}
+
+std::string island_get_r_policy_docstring()
+{
+    return R"(get_r_policy()
+
+Get the replacement policy.
+
+Returns:
+    :class:`~pygmo.r_policy`: a copy of the current replacement policy
+
+)";
+}
+
+std::string island_get_s_policy_docstring()
+{
+    return R"(get_s_policy()
+
+Get the selection policy.
+
+Returns:
+    :class:`~pygmo.s_policy`: a copy of the current selection policy
 
 )";
 }
@@ -4211,6 +4595,9 @@ UDI must involve :class:`~pygmo.algorithm` and :class:`~pygmo.problem` instances
 that provide at least the :attr:`~pygmo.thread_safety.basic` thread safety guarantee, otherwise
 errors will be raised during the evolution.
 
+Note that algorithms and problems implemented in Python are never considered thread safe, and thus
+this UDI can be used only with algorithms and problems implemented in C++.
+
 See also the documentation of the corresponding C++ class :cpp:class:`pagmo::thread_island`.
 
 )";
@@ -4220,14 +4607,20 @@ std::string archipelago_docstring()
 {
     return R"(Archipelago.
 
-An archipelago is a collection of :class:`~pygmo.island` objects which provides a convenient way to perform
-multiple optimisations in parallel.
+An archipelago is a collection of :class:`~pygmo.island` objects connected by a
+:class:`~pygmo.topology`. The islands in the archipelago can exchange individuals
+(i.e., candidate solutions) via a process called *migration*. The individuals migrate
+across the routes described by the topology, and the islands' replacement
+and selection policies (see :class:`~pygmo.r_policy` and :class:`~pygmo.s_policy`)
+establish how individuals are replaced in and selected from the islands' populations.
 
-The interface of :class:`~pygmo.archipelago` mirrors partially the interface of :class:`~pygmo.island`: the
-evolution is initiated by a call to :func:`~pygmo.archipelago.evolve()`, and at any time the user can query the
+The interface of :class:`~pygmo.archipelago` mirrors partially the interface
+of :class:`~pygmo.island`: the evolution is initiated by a call to :func:`~pygmo.archipelago.evolve()`,
+and at any time the user can query the
 state of the archipelago and access its island members. The user can explicitly wait for pending evolutions
-to conclude by calling the :func:`~pygmo.archipelago.wait()` and :func:`~pygmo.archipelago.wait_check()` methods.
-The status of ongoing evolutions in the archipelago can be queried via the :attr:`~pygmo.archipelago.status` attribute.
+to conclude by calling the :func:`~pygmo.archipelago.wait()` and :func:`~pygmo.archipelago.wait_check()`
+methods. The status of ongoing evolutions in the archipelago can be queried via
+:func:`~pygmo.archipelago.status()`.
 
 )";
 }
@@ -4356,6 +4749,113 @@ Returns:
 Raises:
     unspecified: any exception thrown by failures at the intersection between C++ and Python (e.g., type conversion errors,
       mismatched function signatures, etc.)
+
+)";
+}
+
+std::string archipelago_get_migrants_db_docstring()
+{
+    return R"(get_migrants_db()
+
+During the evolution of an archipelago, islands will periodically
+store the individuals selected for migration in a *migrant database*.
+This is a :class:`list` of :class:`tuple` objects whose
+size is equal to the number of islands in the archipelago, and which
+contains the current candidate outgoing migrants for each island.
+
+The migrants tuples consist of 3 values each:
+
+* a 1D NumPy array of individual IDs (represented as 64-bit unsigned integrals),
+* a 2D NumPy array of decision vectors (i.e., the decision vectors of each individual,
+  stored in row-major order),
+* a 2D NumPy array of fitness vectors (i.e., the fitness vectors of each individual,
+  stored in row-major order).
+
+Returns:
+    list: a copy of the database of migrants
+
+Raises:
+    unspecified: any exception thrown by failures at the intersection between C++ and Python (e.g., type conversion errors,
+      mismatched function signatures, etc.)
+
+)";
+}
+
+std::string archipelago_get_migration_log_docstring()
+{
+    return R"(get_migration_log()
+
+Each time an individual migrates from an island (the source) to another
+(the destination), an entry will be added to the migration log.
+The entry is a :class:`tuple` of 6 elements containing:
+
+* a timestamp of the migration,
+* the ID of the individual that migrated,
+* the decision and fitness vectors of the individual that migrated,
+* the indices of the source and destination islands.
+
+The migration log is a :class:`list` of migration entries.
+
+Returns:
+    list: a copy of the migration log
+
+Raises:
+    unspecified: any exception thrown by failures at the intersection between C++ and Python (e.g., type conversion errors,
+      mismatched function signatures, etc.)
+
+)";
+}
+
+std::string archipelago_get_topology_docstring()
+{
+    return R"(get_topology()
+
+Returns:
+    :class:`~pygmo.tyopology`: a copy of the current topology
+
+)";
+}
+
+std::string archipelago_get_migration_type_docstring()
+{
+    return R"(get_migration_type()
+
+Returns:
+    :class:`~pygmo.migration_type`: the current migration type for this archipelago
+
+)";
+}
+
+std::string archipelago_set_migration_type_docstring()
+{
+    return R"(set_migration_type(mt)
+
+Set a new migration type for this archipelago.
+
+Args:
+    mt (:class:`~pygmo.migration_type`): the desired migration type for this archipelago
+
+)";
+}
+
+std::string archipelago_get_migrant_handling_docstring()
+{
+    return R"(get_migrant_handling()
+
+Returns:
+    :class:`~pygmo.migrant_handling`: the current migrant handling policy for this archipelago
+
+)";
+}
+
+std::string archipelago_set_migrant_handling_docstring()
+{
+    return R"(set_migrant_handling(mh)
+
+Set a new migrant handling policy for this archipelago.
+
+Args:
+    mh (:class:`~pygmo.migrant_handling`): the desired migrant handling policy for this archipelago
 
 )";
 }
@@ -5054,7 +5554,7 @@ Raises:
     ValueError: if *cr* is not in [0,1], if *eta_c* is not in [1,100], if *m* is not in [0,1], input_f *mutation* 
       is not one of ``gaussian``, ``uniform`` or ``polynomial``, if *selection* not one of "roulette", 
       "truncated" or *crossover* is not one of ``exponential``, ``binomial``, ``sbx``, ``single``, if *param_m* is
-      not in [0,1] and *mutation* is not ``polynomial``, if *mutation* is not in [1,100] and *mutation* is ``polynomial``.
+      not in [0,1] and *mutation* is not ``polynomial``, if *mutation* is not in [1,100] and *mutation* is ``polynomial``
     unspecified: any exception thrown by failures at the intersection between C++ and Python
       (e.g., type conversion errors, mismatched function signatures, etc.)
 
@@ -5596,6 +6096,1012 @@ Examples:
     >>> ip.reset_numeric_options()
     >>> ip.get_numeric_options()
     {}
+)";
+}
+
+std::string bfe_docstring()
+{
+    return R"(__init__(udbfe = default_bfe())
+
+Batch fitness evaluator.
+
+This class implements the evaluation of decision vectors in batch mode. That is,
+whereas a :class:`pygmo.problem` provides the means to evaluate a single decision
+vector via the :func:`pygmo.problem.fitness()` method, a
+:class:`~pygmo.bfe` (short for *batch fitness evaluator*) enables a :class:`~pygmo.problem`
+to evaluate the fitnesses of a group (or a *batch*) of decision vectors, possibly
+in a parallel/vectorised fashion.
+
+Together with the :func:`pygmo.problem.batch_fitness()` method,
+:class:`~pygmo.bfe` is one of the mechanisms provided
+by pagmo to enable a form of parallelism on a finer level than the
+:class:`~pygmo.archipelago` and :class:`~pygmo.island` classes.
+However, while the :func:`pygmo.problem.batch_fitness()` method must be
+implemented on a UDP-by-UDP basis, a :class:`~pygmo.bfe`
+provides generic batch fitness evaluation capabilities for any :class:`~pygmo.problem`,
+and it can thus be used also with UDPs which do not implement the
+:func:`pygmo.problem.batch_fitness()` method.
+
+Like :class:`~pygmo.problem`, :class:`~pygmo.algorithm`, and many other
+pagmo classes, :class:`~pygmo.bfe` is a generic container
+which stores internally
+a user-defined batch fitness evaluator (UDBFE for short) which actually
+implements the fitness evaluation in batch mode. Users are free to either
+use one of the evaluators provided with pagmo, or to write their own UDBFE.
+
+Every UDBFE must be a callable (i.e., a function or a class with a call
+operator) with a signature equivalent to
+
+.. code-block::
+
+   def __call__(self, prob, dvs):
+     ...
+
+UDBFEs receive in input a :class:`~pygmo.problem` and a batch of decision vectors
+stored contiguously in an array-like object, and they return
+a NumPy array containing the fitness vectors
+corresponding to the input batch of decision vectors (as evaluated by the input problem and
+stored contiguously).
+
+UDBFEs can also implement the following (optional) methods:
+
+.. code-block::
+
+   def get_name(self):
+     ...
+   def get_extra_info(self):
+     ...
+
+See the documentation of the corresponding methods in this class for details on how the optional
+methods in the UDBFE are used by :class:`~pygmo.bfe`.
+
+This class is the Python counterpart of the C++ class :cpp:class:`pagmo::bfe`.
+
+Args:
+    udbfe: a user-defined batch fitness evaluator, either C++ or Python
+
+Raises:
+    NotImplementedError: if *udbfe* does not implement the mandatory methods detailed above
+    unspecified: any exception thrown by methods of the UDBFE invoked during construction,
+      the deep copy of the UDBFE, the constructor of the underlying C++ class, or
+      failures at the intersection between C++ and Python (e.g., type conversion errors, mismatched function
+      signatures, etc.)
+
+)";
+}
+
+std::string bfe_call_docstring()
+{
+    return R"(__call__(prob, dvs)
+
+Call operator.
+
+The call operator will invoke the internal UDBFE instance to perform the evaluation in batch mode
+of the decision vectors stored in *dvs* using the input problem *prob*, and it will return the corresponding
+fitness vectors.
+
+The input decision vectors must be stored contiguously in *dvs*: for a problem with dimension :math:`n`, the first
+decision vector in *dvs* occupies the index range :math:`\left[0, n\right)`, the second decision vector
+occupies the range :math:`\left[n, 2n\right)`, and so on. Similarly, the output fitness vectors must be
+laid out contiguously in the return value: for a problem with fitness dimension :math:`f`, the first fitness
+vector will occupy the index range :math:`\left[0, f\right)`, the second fitness vector
+will occupy the range :math:`\left[f, 2f\right)`, and so on.
+
+This function will perform a variety of sanity checks on both *dvs* and on the return value.
+
+Args:
+    prob (:class:`~pygmo.problem`): the input problem
+    dvs (array-like object): the input decision vectors that will be evaluated in batch mode
+
+Returns:
+    1D NumPy float array: the fitness vectors corresponding to the input decision vectors in *dvs*
+
+Raises:
+    ValueError: if *dvs* or the return value produced by the UDBFE are incompatible with the input problem *prob*
+    unspecified: any exception raised by the invocation of the UDBFE, or by failures at the intersection
+      between C++ and Python (e.g., type conversion errors, mismatched function signatures, etc.)
+
+)";
+}
+
+std::string bfe_get_name_docstring()
+{
+    return R"(get_name()
+
+Bfe's name.
+
+If the UDBFE provides a ``get_name()`` method, then this method will return the output of its ``get_name()`` method.
+Otherwise, an implementation-defined name based on the type of the UDBFE will be returned.
+
+Returns:
+    str: the bfe's name
+
+)";
+}
+
+std::string bfe_get_extra_info_docstring()
+{
+    return R"(get_extra_info()
+
+Bfe's extra info.
+
+If the UDBFE provides a ``get_extra_info()`` method, then this method will return the output of its ``get_extra_info()``
+method. Otherwise, an empty string will be returned.
+
+Returns:
+  str: extra info about the UDBFE
+
+Raises:
+  unspecified: any exception thrown by the ``get_extra_info()`` method of the UDBFE
+
+)";
+}
+
+std::string bfe_get_thread_safety_docstring()
+{
+    return R"(get_thread_safety()
+
+Bfe's thread safety level.
+
+This method will return a value of the enum :class:`pygmo.thread_safety` which indicates the thread safety level
+of the UDBFE. Unlike in C++, in Python it is not possible to re-implement this method in the UDBFE. That is, for C++
+UDBFEs, the returned value will be the value returned by the ``get_thread_safety()`` method of the UDBFE. For Python
+UDBFEs, the returned value will be unconditionally :attr:`pygmo.thread_safety.none`.
+
+Returns:
+    a value of :class:`pygmo.thread_safety`: the thread safety level of the UDBFE
+
+)";
+}
+
+std::string default_bfe_docstring()
+{
+    return R"(__init__()
+
+Default UDBFE.
+
+This class is a user-defined batch fitness evaluator (UDBFE) that can be used to
+construct a :class:`~pygmo.bfe`.
+
+:class:`~pygmo.default_bfe` is the default UDBFE used by :class:`~pygmo.bfe`, and,
+depending on the properties of the input :class:`~pygmo.problem`, it will delegate the implementation
+of its call operator to :class:`~pygmo.member_bfe` or :class:`~pygmo.thread_bfe`.
+
+See also the docs of the C++ class :cpp:class:`pagmo::default_bfe`.
+
+)";
+}
+
+std::string thread_bfe_docstring()
+{
+    return R"(__init__()
+
+Threaded UDBFE.
+
+This class is a user-defined batch fitness evaluator (UDBFE) that can be used to
+construct a :class:`~pygmo.bfe`.
+
+:class:`~pygmo.thread_bfe` will use multiple threads of execution to parallelise
+the evaluation of the fitnesses of a batch of input decision vectors.
+
+See also the docs of the C++ class :cpp:class:`pagmo::thread_bfe`.
+
+)";
+}
+
+std::string member_bfe_docstring()
+{
+    return R"(__init__()
+
+Member UDBFE.
+
+This class is a user-defined batch fitness evaluator (UDBFE) that can be used to
+construct a :class:`~pygmo.bfe`.
+
+:class:`~pygmo.member_bfe` is a simple wrapper which delegates batch fitness evaluations
+to the input problem's :func:`pygmo.problem.batch_fitness()` method.
+
+See also the docs of the C++ class :cpp:class:`pagmo::member_bfe`.
+
+)";
+}
+
+std::string topology_docstring()
+{
+    return R"(__init__(udt = unconnected())
+
+Topology.
+
+In the jargon of pagmo, a topology is an object that represents connections among
+:class:`islands <pygmo.island>` in an :class:`~pygmo.archipelago`.
+In essence, a topology is a *weighted directed graph* in which
+
+* the *vertices* (or *nodes*) are islands,
+* the *edges* (or *arcs*) are directed connections between islands across which information flows during the
+  optimisation process (via the migration of individuals),
+* the *weights* of the edges (whose numerical values are the :math:`[0.,1.]` range) represent the migration
+  probability.
+
+Following the same schema adopted for :class:`~pygmo.problem`, :class:`~pygmo.algorithm`, etc.,
+:class:`~pygmo.topology` exposes a generic interface to *user-defined topologies* (or UDT for short).
+UDTs are classes providing a certain set
+of methods that describe the properties of (and allow to interact with) a topology. Once
+defined and instantiated, a UDT can then be used to construct an instance of this class,
+:class:`~pygmo.topology`, which provides a generic interface to topologies for use by
+:class:`~pygmo.archipelago`.
+
+In a :class:`~pygmo.topology`, vertices in the graph are identified by a zero-based unique
+integral index. This integral index corresponds to the index of an
+:class:`~pygmo.island` in an :class:`~pygmo.archipelago`.
+
+Every UDT must implement at least the following methods:
+
+.. code-block::
+
+   def get_connections(self, n):
+     ...
+   def push_back(self):
+     ...
+
+The ``get_connections()`` method takes as input a vertex index ``n``, and it is expected to return
+a pair of array-like values containing respectively:
+
+* the indices of the vertices which are connecting to ``n`` (that is, the list of vertices for which a directed edge
+  towards ``n`` exists),
+* the weights (i.e., the migration probabilities) of the edges linking the connecting vertices to ``n``.
+
+The ``push_back()`` method is expected to add a new vertex to the topology, assigning it the next
+available index and establishing connections to other vertices. The ``push_back()`` method is invoked
+by :func:`pygmo.archipelago.push_back()` upon the insertion of a new island into an archipelago,
+and it is meant to allow the incremental construction of a topology. That is, after ``N`` calls to ``push_back()``
+on an initially-empty topology, the topology should contain ``N`` vertices and any number of edges (depending
+on the specifics of the topology).
+
+Additional optional methods can be implemented in a UDT:
+
+.. code-block::
+
+   def get_name(self):
+     ...
+   def get_extra_info(self):
+     ...
+
+See the documentation of the corresponding methods in this class for details on how the optional
+methods in the UDT are used by :class:`~pygmo.topology`.
+
+Topologies are used in asynchronous operations involving migration in archipelagos,
+and thus they need to provide a certain degree of thread safety. Specifically, the
+``get_connections()`` method of the UDT might be invoked concurrently with
+any other method of the UDT interface. It is up to the
+authors of user-defined topologies to ensure that this safety requirement is satisfied.
+
+This class is the Python counterpart of the C++ class :cpp:class:`pagmo::topology`.
+
+Args:
+    udt: a user-defined topology, either C++ or Python
+
+Raises:
+    NotImplementedError: if *udt* does not implement the mandatory methods detailed above
+    unspecified: any exception thrown by methods of the UDT invoked during construction,
+      the deep copy of the UDT, the constructor of the underlying C++ class, or
+      failures at the intersection between C++ and Python (e.g., type conversion errors, mismatched function
+      signatures, etc.)
+
+)";
+}
+
+std::string topology_get_connections_docstring()
+{
+    return R"(get_connections(n)
+
+Get the connections to a vertex.
+
+This method will invoke the ``get_connections()`` method of the UDT, which is expected to return
+a pair of array-like objects containing respectively:
+
+* the indices of the vertices which are connecting to *n* (that is, the list of vertices for which a directed
+  edge towards *n* exists),
+* the weights (i.e., the migration probabilities) of the edges linking the connecting vertices to *n*.
+
+This method will also run sanity checks on the output of the ``get_connections()`` method of the UDT.
+
+Args:
+    n (int): the index of the vertex whose incoming connections' details will be returned
+
+Returns:
+    Pair of 1D NumPy arrays: a pair of arrays describing *n*'s incoming connections
+
+Raises:
+    RuntimeError: if the object returned by a pythonic UDT is not iteratable, or it is an iteratable
+       whose number of elements is not exactly 2, or if the invocation of the ``get_connections()``
+       method of the UDT raises an exception
+    ValueError: if the sizes of the returned arrays differ, or if any element of the second
+       array is not in the :math:`[0.,1.]` range
+    unspecified: any exception raised by failures at the intersection
+       between C++ and Python (e.g., type conversion errors, mismatched function signatures, etc.)
+
+)";
+}
+
+std::string topology_push_back_docstring()
+{
+    return R"(push_back(n=1)
+
+Add vertices.
+
+This method will invoke the ``push_back()`` method of the UDT *n* times. The ``push_back()`` method
+of the UDT is expected to add a new vertex to the
+topology, assigning it the next available index and establishing connections to other vertices.
+
+Args:
+    n (int): the number of times the ``push_back()`` method of the UDT will be invoked
+
+Raises:
+    OverflowError: if *n* is negative or too large
+    unspecified: any exception thrown by the ``push_back()`` method of the UDT
+
+)";
+}
+
+std::string topology_get_name_docstring()
+{
+    return R"(get_name()
+
+Topology's name.
+
+If the UDT provides a ``get_name()`` method, then this method will return the output of its ``get_name()`` method.
+Otherwise, an implementation-defined name based on the type of the UDT will be returned.
+
+Returns:
+    str: the topology's name
+
+)";
+}
+
+std::string topology_get_extra_info_docstring()
+{
+    return R"(get_extra_info()
+
+Topology's extra info.
+
+If the UDT provides a ``get_extra_info()`` method, then this method will return the output of its ``get_extra_info()``
+method. Otherwise, an empty string will be returned.
+
+Returns:
+  str: extra info about the UDT
+
+Raises:
+  unspecified: any exception thrown by the ``get_extra_info()`` method of the UDT
+
+)";
+}
+
+std::string unconnected_docstring()
+{
+    return R"(__init__()
+
+Unconnected topology.
+
+This user-defined topology (UDT) represents an unconnected graph. This is the default
+UDT used by :class:`pygmo.topology`.
+
+See also the docs of the C++ class :cpp:class:`pagmo::unconnected`.
+
+)";
+}
+
+std::string ring_docstring()
+{
+    return R"(__init__(n=0, w=1.)
+
+Ring topology.
+
+This user-defined topology (UDT) represents a bidirectional ring (that is, a ring in
+which each node connects to both the previous and the following nodes).
+
+See also the docs of the C++ class :cpp:class:`pagmo::ring`.
+
+Args:
+    n (int): the desired number of vertices
+    w (float): the weight of the edges
+
+Raises:
+    OverflowError: if *n* is negative or too large
+    ValueError: if *w* is not in the :math:`\left[0, 1\right]` range
+
+)";
+}
+
+std::string ring_get_weight_docstring()
+{
+    return R"(get_weight()
+
+Returns:
+  float: the weight *w* used in the construction of this topology
+
+)";
+}
+
+std::string base_bgl_num_vertices_docstring()
+{
+    return R"(num_vertices()
+
+Returns:
+    int: the number of vertices in the topology
+
+)";
+}
+
+std::string base_bgl_are_adjacent_docstring()
+{
+    return R"(are_adjacent(i, j)
+
+Check if two vertices are adjacent.
+
+Two vertices *i* and *j* are adjacent if there is a directed edge connecting *i* to *j*.
+
+Args:
+    i (int): the first vertex index
+    j (int): the second vertex index
+
+Returns:
+    bool: :data:`True` if *i* and *j* are adjacent, :data:`False` otherwise
+
+Raises:
+    ValueError: if *i* or *j* are not smaller than the number of vertices
+    OverflowError: if *i* or *j* are negative or too large
+
+)";
+}
+
+std::string base_bgl_add_vertex_docstring()
+{
+    return R"(add_vertex()
+
+Add a vertex.
+
+This method will add a new vertex to the topology.
+
+The newly-added vertex will be disjoint from any other vertex in the topology (i.e., there are no connections to/from the new vertex).
+
+)";
+}
+
+std::string base_bgl_add_edge_docstring()
+{
+    return R"(add_edge(i, j, w=1.)
+
+Add a new edge.
+
+This method will add a new edge of weight *w* connecting *i* to *j*.
+
+Args:
+    i (int): the first vertex index
+    j (int): the second vertex index
+    w (float): the edge's weight
+
+Raises:
+    OverflowError: if *i* or *j* are negative or too large
+    ValueError: if *i* or *j* are not smaller than the number of vertices, *i* and *j* are already adjacent, or
+       if *w* is not in the :math:`\left[0, 1\right]` range
+
+)";
+}
+
+std::string base_bgl_remove_edge_docstring()
+{
+    return R"(remove_edge(i, j)
+
+Remove an existing edge.
+
+This method will remove the edge connecting *i* to *j*.
+
+Args:
+    i (int): the first vertex index
+    j (int): the second vertex index
+
+Raises:
+    ValueError: if *i* or *j* are not smaller than the number of vertices, or *i* and *j* are not adjacent
+    OverflowError: if *i* or *j* are negative or too large
+
+)";
+}
+
+std::string base_bgl_set_weight_docstring()
+{
+    return R"(set_weight(i, j, w)
+
+Set the weight of an edge.
+
+This method will set to *w* the weight of the edge connecting *i* to *j*.
+
+Args:
+    i (int): the first vertex index
+    j (int): the second vertex index
+    w (float): the desired weight
+
+Raises:
+    OverflowError: if *i* or *j* are negative or too large
+    ValueError: if *i* or *j* are not smaller than the number of vertices, *i* and *j* are not adjacent, or
+       if *w* is not in the :math:`\left[0, 1\right]` range
+
+)";
+}
+
+std::string base_bgl_set_all_weights_docstring()
+{
+    return R"(set_all_weights(w)
+
+This method will set the weights of all edges in the topology to *w*.
+
+Args:
+    w (float): the edges' weight
+
+Raises:
+    ValueError: if *w* is not in the :math:`\left[0, 1\right]` range
+
+)";
+}
+
+std::string fully_connected_docstring()
+{
+    return R"(__init__(n=0, w=1.)
+
+Fully connected topology.
+
+This user-defined topology (UDT) represents a *complete graph* (that is, a topology
+in which all vertices connect to all other vertices). The edge weight is configurable
+at construction, and it will be the same for all the edges in the topology.
+
+See also the docs of the C++ class :cpp:class:`pagmo::fully_connected`.
+
+Args:
+    n (int): the desired number of vertices
+    w (float): the weight of the edges
+
+Raises:
+    OverflowError: if *n* is negative or too large
+    ValueError: if *w* is not in the :math:`\left[0, 1\right]` range
+
+)";
+}
+
+std::string fully_connected_get_weight_docstring()
+{
+    return ring_get_weight_docstring();
+}
+
+std::string fully_connected_num_vertices_docstring()
+{
+    return base_bgl_num_vertices_docstring();
+}
+
+std::string r_policy_docstring()
+{
+    return R"(__init__(udrp = fair_replace())
+
+Replacement policy.
+
+A replacement policy establishes
+how, during migration within an :class:`~pygmo.archipelago`,
+a group of migrants replaces individuals in an existing
+:class:`~pygmo.population`. In other words, a replacement
+policy is tasked with producing a new set of individuals from
+an original set of individuals and a set of candidate migrants.
+
+Following the same schema adopted for :class:`~pygmo.problem`, :class:`~pygmo.algorithm`, etc.,
+:class:`~pygmo.r_policy` exposes a generic
+interface to *user-defined replacement policies* (or UDRP for short).
+UDRPs are classes providing a certain set
+of methods that implement the logic of the replacement policy. Once
+defined and instantiated, a UDRP can then be used to construct an instance of this class,
+:class:`~pygmo.r_policy`, which
+provides a generic interface to replacement policies for use by :class:`~pygmo.island`.
+
+Every UDRP must implement at least the following method:
+
+.. code-block::
+
+   def replace(self, inds, nx, nix, nobj, nec, nic, tol, mig):
+     ...
+
+The ``replace()`` method takes in input the following parameters:
+
+* a group of individuals *inds*,
+* a set of arguments describing the properties of the :class:`~pygmo.problem` the individuals refer to:
+
+  * the total dimension *nx*,
+  * the integral dimension *nix*,
+  * the number of objectives *nobj*,
+  * the number of equality constraints *nec*,
+  * the number of inequality constraints *nic*,
+  * the problem's constraint tolerances *tol*,
+
+* a set of migrants *mig*,
+
+and it produces in output another set of individuals resulting from replacing individuals in *inds* with
+individuals from *mig* (following some logic established by the UDRP). The sets of individuals *inds* and
+*mig*, and the return value of the ``replace()`` method are represented as tuples of 3 elements containing:
+
+* a 1D NumPy array of individual IDs (represented as 64-bit unsigned integrals),
+* a 2D NumPy array of decision vectors (i.e., the decision vectors of each individual,
+  stored in row-major order),
+* a 2D NumPy array of fitness vectors (i.e., the fitness vectors of each individual,
+  stored in row-major order).
+
+Additional optional methods can be implemented in a UDRP:
+
+.. code-block::
+
+   def get_name(self):
+     ...
+   def get_extra_info(self):
+     ...
+
+See the documentation of the corresponding methods in this class for details on how the optional
+methods in the UDRP are used by :class:`~pygmo.r_policy`.
+
+Replacement policies are used in asynchronous operations involving migration in archipelagos,
+and thus they need to provide a certain degree of thread safety. Specifically, the
+``replace()`` method of the UDRP might be invoked concurrently with
+any other method of the UDRP interface. It is up to the
+authors of user-defined replacement policies to ensure that this safety requirement is satisfied.
+
+This class is the Python counterpart of the C++ class :cpp:class:`pagmo::r_policy`.
+
+Args:
+    udrp: a user-defined replacement policy, either C++ or Python
+
+Raises:
+    NotImplementedError: if *udrp* does not implement the mandatory methods detailed above
+    unspecified: any exception thrown by methods of the UDRP invoked during construction,
+      the deep copy of the UDRP, the constructor of the underlying C++ class, or
+      failures at the intersection between C++ and Python (e.g., type conversion errors, mismatched function
+      signatures, etc.)
+
+)";
+}
+
+std::string r_policy_replace_docstring()
+{
+    return R"(replace(inds, nx, nix, nobj, nec, nic, tol, mig)
+
+Replace individuals in a group with migrants from another group.
+
+This method will invoke the ``replace()`` method of the UDRP.
+Given a set of individuals, *inds*, and a set of migrants, *mig*, the ``replace()`` method of the UDRP
+is expected to replace individuals in *inds*
+with individuals from *mig*, and return the new set of individuals resulting from the replacement.
+The other arguments of this method describe the properties of the :class:`~pygmo.problem`
+that the individuals in *inds* and *mig* refer to.
+
+The sets of individuals *inds* and *mig*, and the return value of this method are
+represented as tuples of 3 elements containing:
+
+* a 1D NumPy array of individual IDs (represented as 64-bit unsigned integrals),
+* a 2D NumPy array of decision vectors (i.e., the decision vectors of each individual,
+  stored in row-major order),
+* a 2D NumPy array of fitness vectors (i.e., the fitness vectors of each individual,
+  stored in row-major order).
+
+In addition to invoking the ``replace()`` method of the UDRP, this method will also
+perform a variety of sanity checks on both the input arguments and on the output produced by the
+UDRP.
+
+Args:
+    inds (tuple): the original group of individuals
+    nx (int): the dimension of the problem *inds* and *mig* refer to
+    nix (int): the integral dimension of the problem *inds* and *mig* refer to
+    nobj (int): the number of objectives of the problem *inds* and *mig* refer to
+    nec (int): the number of equality constraints of the problem *inds* and *mig* refer to
+    nic (int): the number of inequality constraints of the problem *inds* and *mig* refer to
+    tol (array-like object): the vector of constraints tolerances of the problem *inds* and *mig* refer to
+    mig (tuple): the group of migrants
+
+Returns:
+    tuple: a new set of individuals resulting from replacing individuals in *inds* with individuals from *mig*
+
+Raises:
+    RuntimeError: if the object returned by a pythonic UDRP is not iteratable, or it is an iteratable
+       whose number of elements is not exactly 3, or if the invocation of the ``replace()``
+       method of the UDRP raises an exception
+    ValueError: if *inds*, *mig* or the return value are not consistent with the problem properties,
+       or the ID, decision and fitness vectors in *inds*, *mig* or the return value have inconsistent sizes,
+       or the problem properties are invalid (e.g., *nobj* is zero, *nix* > *nx*, etc.)
+    unspecified: any exception raised by failures at the intersection
+       between C++ and Python (e.g., type conversion errors, mismatched function signatures, etc.)
+
+)";
+}
+
+std::string r_policy_get_name_docstring()
+{
+    return R"(get_name()
+
+Name of the replacement policy.
+
+If the UDRP provides a ``get_name()`` method, then this method will return the output of its ``get_name()`` method.
+Otherwise, an implementation-defined name based on the type of the UDRP will be returned.
+
+Returns:
+    str: the name of the replacement policy
+
+)";
+}
+
+std::string r_policy_get_extra_info_docstring()
+{
+    return R"(get_extra_info()
+
+Replacement policy's extra info.
+
+If the UDRP provides a ``get_extra_info()`` method, then this method will return the output of its ``get_extra_info()``
+method. Otherwise, an empty string will be returned.
+
+Returns:
+  str: extra info about the UDRP
+
+Raises:
+  unspecified: any exception thrown by the ``get_extra_info()`` method of the UDRP
+
+)";
+}
+
+std::string fair_replace_docstring()
+{
+    return R"(__init__(rate=1)
+
+Fair replacement policy.
+
+This user-defined replacement policy (UDRP) will replace individuals in
+a group only if the candidate replacement individuals are *better* than
+the original individuals.
+
+In this context, *better* means the following:
+
+* in single-objective unconstrained problems, an individual is better
+  than another one if its fitness is lower,
+* in single-objective constrained problems, individuals are ranked
+  via :func:`~pygmo.sort_population_con()`,
+* in multi-objective unconstrained problems, individuals are ranked
+  via :func:`~pygmo.sort_population_mo()`.
+
+Note that this user-defined replacement policy currently does *not* support
+multi-objective constrained problems.
+
+A fair replacement policy is constructed from a *rate* argument, which
+can be either an integral or a floating-point value.
+
+If *rate* is a floating point value in the :math:`\left[0,1\right]` range,
+then it represents a *fractional* migration rate. That is, it indicates,
+the fraction of individuals that may be replaced in the input population:
+a value of 0 means that no individuals will be replaced, a value of 1 means that
+all individuals may be replaced.
+
+If *rate* is an integral value, then it represents an *absolute* migration rate, that is,
+the exact number of individuals that may be replaced in the input population.
+
+See also the docs of the C++ class :cpp:class:`pagmo::fair_replace`.
+
+Args:
+    rate (int, float): the desired migration rate
+
+Raises:
+    ValueError: if the supplied fractional migration rate is not finite
+      or not in the :math:`\left[0,1\right]` range
+    TypeError: if *rate* is not an instance of :class:`int` or :class:`float`
+    unspecified: any exception raised by the invoked C++ constructor
+
+)";
+}
+
+std::string s_policy_docstring()
+{
+    return R"(__init__(udsp = select_best())
+
+Selection policy.
+
+A selection policy establishes
+how, during migration within an :class:`~pygmo.archipelago`,
+candidate migrants are selected from an :class:`~pygmo.island`.
+
+Following the same schema adopted for :class:`~pygmo.problem`, :class:`~pygmo.algorithm`, etc.,
+:class:`~pygmo.s_policy` exposes a generic
+interface to *user-defined selection policies* (or UDSP for short).
+UDSPs are classes providing a certain set of methods that implement the logic of the selection policy. Once
+defined and instantiated, a UDSP can then be used to construct an instance of this class,
+:class:`~pygmo.s_policy`, which
+provides a generic interface to selection policies for use by :class:`~pygmo.island`.
+
+Every UDSP must implement at least the following method:
+
+.. code-block::
+
+   def select(self, inds, nx, nix, nobj, nec, nic, tol):
+     ...
+
+The ``select()`` method takes in input the following parameters:
+
+* a group of individuals *inds*,
+* a set of arguments describing the properties of the :class:`~pygmo.problem` the individuals refer to:
+
+  * the total dimension *nx*,
+  * the integral dimension *nix*,
+  * the number of objectives *nobj*,
+  * the number of equality constraints *nec*,
+  * the number of inequality constraints *nic*,
+  * the problem's constraint tolerances *tol*,
+
+and it produces in output another set of individuals resulting from selecting individuals in *inds*
+(following some logic established by the UDSP). The sets of individuals *inds*
+and the return value of the ``select()`` method are represented as tuples of 3 elements containing:
+
+* a 1D NumPy array of individual IDs (represented as 64-bit unsigned integrals),
+* a 2D NumPy array of decision vectors (i.e., the decision vectors of each individual,
+  stored in row-major order),
+* a 2D NumPy array of fitness vectors (i.e., the fitness vectors of each individual,
+  stored in row-major order).
+
+Additional optional methods can be implemented in a UDSP:
+
+.. code-block::
+
+   def get_name(self):
+     ...
+   def get_extra_info(self):
+     ...
+
+See the documentation of the corresponding methods in this class for details on how the optional
+methods in the UDSP are used by :class:`~pygmo.s_policy`.
+
+Selection policies are used in asynchronous operations involving migration in archipelagos,
+and thus they need to provide a certain degree of thread safety. Specifically, the
+``select()`` method of the UDSP might be invoked concurrently with
+any other method of the UDSP interface. It is up to the
+authors of user-defined selection policies to ensure that this safety requirement is satisfied.
+
+This class is the Python counterpart of the C++ class :cpp:class:`pagmo::s_policy`.
+
+Args:
+    udsp: a user-defined selection policy, either C++ or Python
+
+Raises:
+    NotImplementedError: if *udsp* does not implement the mandatory methods detailed above
+    unspecified: any exception thrown by methods of the UDSP invoked during construction,
+      the deep copy of the UDSP, the constructor of the underlying C++ class, or
+      failures at the intersection between C++ and Python (e.g., type conversion errors, mismatched function
+      signatures, etc.)
+
+)";
+}
+
+std::string s_policy_select_docstring()
+{
+    return R"(select(inds, nx, nix, nobj, nec, nic, tol)
+
+Select individuals from a group.
+
+This method will invoke the ``select()`` method of the UDSP.
+Given a set of individuals, *inds*, the ``select()`` method of the UDSP
+is expected to return a new set of individuals selected from *inds*.
+The other arguments of this method describe the properties of the :class:`~pygmo.problem`
+that the individuals in *inds* refer to.
+
+The set of individuals *inds* and the return value of this method are
+represented as tuples of 3 elements containing:
+
+* a 1D NumPy array of individual IDs (represented as 64-bit unsigned integrals),
+* a 2D NumPy array of decision vectors (i.e., the decision vectors of each individual,
+  stored in row-major order),
+* a 2D NumPy array of fitness vectors (i.e., the fitness vectors of each individual,
+  stored in row-major order).
+
+In addition to invoking the ``select()`` method of the UDSP, this function will also
+perform a variety of sanity checks on both the input arguments and on the output produced by the
+UDSP.
+
+Args:
+    inds (tuple): the original group of individuals
+    nx (int): the dimension of the problem *inds* refers to
+    nix (int): the integral dimension of the problem *inds* refers to
+    nobj (int): the number of objectives of the problem *inds* refers to
+    nec (int): the number of equality constraints of the problem *inds* refers to
+    nic (int): the number of inequality constraints of the problem *inds* refers to
+    tol (array-like object): the vector of constraints tolerances of the problem *inds* refers to
+
+Returns:
+    tuple: a new set of individuals resulting from selecting individuals in *inds*.
+
+Raises:
+    RuntimeError: if the object returned by a pythonic UDSP is not iteratable, or it is an iteratable
+       whose number of elements is not exactly 3, or if the invocation of the ``select()``
+       method of the UDSP raises an exception
+    ValueError: if *inds* or the return value are not consistent with the problem properties,
+       or the ID, decision and fitness vectors in *inds* or the return value have inconsistent sizes,
+       or the problem properties are invalid (e.g., *nobj* is zero, *nix* > *nx*, etc.)
+    unspecified: any exception raised by failures at the intersection
+       between C++ and Python (e.g., type conversion errors, mismatched function signatures, etc.)
+
+)";
+}
+
+std::string s_policy_get_name_docstring()
+{
+    return R"(get_name()
+
+Name of the selection policy.
+
+If the UDSP provides a ``get_name()`` method, then this method will return the output of its ``get_name()`` method.
+Otherwise, an implementation-defined name based on the type of the UDSP will be returned.
+
+Returns:
+    str: the name of the selection policy
+
+)";
+}
+
+std::string s_policy_get_extra_info_docstring()
+{
+    return R"(get_extra_info()
+
+Selection policy's extra info.
+
+If the UDSP provides a ``get_extra_info()`` method, then this method will return the output of its ``get_extra_info()``
+method. Otherwise, an empty string will be returned.
+
+Returns:
+  str: extra info about the UDSP
+
+Raises:
+  unspecified: any exception thrown by the ``get_extra_info()`` method of the UDSP
+
+)";
+}
+
+std::string select_best_docstring()
+{
+    return R"(__init__(rate=1)
+
+Select best selection policy.
+
+This user-defined selection policy (UDSP) will select the *best*
+individuals from a group.
+
+In this context, *best* means the following:
+
+* in single-objective unconstrained problems, individuals are ranked
+  according to their fitness function,
+* in single-objective constrained problems, individuals are ranked
+  via :func:`~pygmo.sort_population_con()`,
+* in multi-objective unconstrained problems, individuals are ranked
+  via :func:`~pygmo.sort_population_mo()`.
+
+Note that this user-defined selection policy currently does *not* support
+multi-objective constrained problems.
+
+A select best policy is constructed from a *rate* argument, which
+can be either an integral or a floating-point value.
+
+If *rate* is a floating point value in the :math:`\left[0,1\right]` range,
+then it represents a *fractional* migration rate. That is, it indicates,
+the fraction of individuals that will be selected from the input population:
+a value of 0 means that no individuals will be selected, a value of 1 means that
+all individuals will be selected.
+
+If *rate* is an integral value, then it represents an *absolute* migration rate, that is,
+the exact number of individuals that will be selected from the input population.
+
+See also the docs of the C++ class :cpp:class:`pagmo::select_best`.
+
+Args:
+    rate (int, float): the desired migration rate
+
+Raises:
+    ValueError: if the supplied fractional migration rate is not finite
+      or not in the :math:`\left[0,1\right]` range
+    TypeError: if *rate* is not an instance of :class:`int` or :class:`float`
+    unspecified: any exception raised by the invoked C++ constructor
+
 )";
 }
 

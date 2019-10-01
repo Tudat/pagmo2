@@ -80,6 +80,18 @@ class _raise_exception_2:
         return ([0], [1])
 
 
+class _r_pol(object):
+
+    def replace(self, inds, nx, nix, nobj, nec, nic, tol, mig):
+        return inds
+
+
+class _s_pol(object):
+
+    def select(self, inds, nx, nix, nobj, nec, nic, tol):
+        return inds
+
+
 class core_test_case(_ut.TestCase):
     """Test case for core PyGMO functionality.
 
@@ -127,6 +139,68 @@ class core_test_case(_ut.TestCase):
                          {'a': l, 3: "Hello world"})
         a = random.rand(3, 2)
         self.assert_(all(tos(a) == a))
+
+        # Run the tests for the selection of the serialization backend.
+        self.run_s11n_test()
+
+    def run_s11n_test(self):
+        # Tests for the selection of the serialization backend.
+        import cloudpickle as clpickle
+        import pickle
+        from . import set_serialization_backend as ssb, get_serialization_backend as gsb
+        from . import problem, island, de
+        has_dill = False
+        try:
+            import dill
+            has_dill = True
+        except ImportError:
+            pass
+
+        # Default s11n backend.
+        self.assertTrue(gsb() == clpickle)
+
+        # Error checking.
+        with self.assertRaises(TypeError) as cm:
+            ssb(1)
+        err = cm.exception
+        self.assertTrue(
+            "The serialization backend must be specified as a string, but an object of type" in str(err))
+
+        with self.assertRaises(ValueError) as cm:
+            ssb("hello")
+        err = cm.exception
+        self.assertEqual(
+            "The serialization backend 'hello' is not valid. The valid backends are: ['pickle', 'cloudpickle', 'dill']", str(err))
+
+        if not has_dill:
+            with self.assertRaises(ImportError) as cm:
+                ssb("dill")
+            err = cm.exception
+            self.assertEqual(
+                "The 'dill' serialization backend was specified, but the dill module is not installed.", str(err))
+
+        ssb("pickle")
+        self.assertTrue(gsb() == pickle)
+
+        # Try to pickle something.
+        p = problem(_prob())
+        self.assertEqual(str(pickle.loads(pickle.dumps(p))), str(p))
+        isl = island(prob=p, algo=de(gen=500), size=20)
+        self.assertEqual(str(pickle.loads(pickle.dumps(isl))), str(isl))
+
+        # Try with dill as well, if available.
+        if has_dill:
+            ssb("dill")
+            self.assertTrue(gsb() == dill)
+
+            p = problem(_prob())
+            self.assertEqual(str(pickle.loads(pickle.dumps(p))), str(p))
+            isl = island(prob=p, algo=de(gen=500), size=20)
+            self.assertEqual(str(pickle.loads(pickle.dumps(isl))), str(isl))
+
+        # Reset to cloudpickle before exiting.
+        ssb("cloudpickle")
+        self.assertTrue(gsb() == clpickle)
 
 
 class population_test_case(_ut.TestCase):
@@ -308,6 +382,29 @@ class population_test_case(_ut.TestCase):
         self.assertEqual(repr(pop), repr(p))
 
 
+class golomb_ruler_test_case(_ut.TestCase):
+    """Test case for the Golomb ruler UDP
+
+    """
+
+    def runTest(self):
+        from .core import golomb_ruler
+        udp = golomb_ruler(4, 10)
+        udp = golomb_ruler(order=4, upper_bound=10)
+
+
+class lennard_jones_test_case(_ut.TestCase):
+    """Test case for the Lennard-Jones UDP
+
+    """
+
+    def runTest(self):
+        from .core import lennard_jones
+        udp = lennard_jones()
+        udp = lennard_jones(3)
+        udp = lennard_jones(atoms=3)
+
+
 class pso_test_case(_ut.TestCase):
     """Test case for the UDA pso
 
@@ -335,6 +432,86 @@ class de_test_case(_ut.TestCase):
         uda = de(gen=10000, F=0.5, CR=0.3, variant=9, ftol=1e-3, xtol=1e-2)
         uda = de(gen=10000, F=0.5, CR=0.3, variant=9,
                  ftol=1e-3, xtol=1e-2, seed=32)
+        self.assertEqual(uda.get_seed(), 32)
+        log = uda.get_log()
+
+
+class nsga2_test_case(_ut.TestCase):
+    """Test case for the UDA nsga2
+
+    """
+
+    def runTest(self):
+        from .core import nsga2, algorithm
+        from pickle import loads, dumps
+        uda = nsga2()
+        uda = nsga2(gen=10, cr=0.94, eta_c=9., m=0.05, eta_m=10., seed=0)
+        self.assertEqual(uda.get_seed(), 0)
+        a = algorithm(uda)
+        self.assertEqual(str(a), str(loads(dumps(a))))
+        log = uda.get_log()
+
+
+class gaco_test_case(_ut.TestCase):
+    """Test case for the UDA gaco
+
+    """
+
+    def runTest(self):
+        from .core import gaco, algorithm, bfe
+        from pickle import loads, dumps
+        uda = gaco()
+        uda = gaco(gen=1000, seed=5)
+        self.assertEqual(uda.get_seed(), 5)
+        a = algorithm(uda)
+        self.assertEqual(str(a), str(loads(dumps(a))))
+        log = uda.get_log()
+        uda.set_bfe(b=bfe())
+        uda.set_bfe(bfe())
+
+
+class gwo_test_case(_ut.TestCase):
+    """Test case for the UDA gwo
+
+    """
+
+    def runTest(self):
+        from .core import gwo, algorithm
+        from pickle import loads, dumps
+        uda = gwo()
+        uda = gwo(gen=1000, seed=5)
+        self.assertEqual(uda.get_seed(), 5)
+        a = algorithm(uda)
+        self.assertEqual(str(a), str(loads(dumps(a))))
+        log = uda.get_log()
+
+
+class de1220_test_case(_ut.TestCase):
+    """Test case for the UDA de1220
+
+    """
+
+    def runTest(self):
+        from .core import de1220, algorithm
+        from pickle import loads, dumps
+        uda = de1220()
+        uda = de1220(gen=1000, seed=5)
+        self.assertEqual(uda.get_seed(), 5)
+        a = algorithm(uda)
+        self.assertEqual(str(a), str(loads(dumps(a))))
+        log = uda.get_log()
+
+
+class sea_test_case(_ut.TestCase):
+    """Test case for the UDA sea
+
+    """
+
+    def runTest(self):
+        from .core import sea
+        uda = sea()
+        uda = sea(gen=10000)
+        uda = sea(gen=10000, seed=32)
         self.assertEqual(uda.get_seed(), 32)
         log = uda.get_log()
 
@@ -475,21 +652,6 @@ class sga_test_case(_ut.TestCase):
                   mutation="polynomial", selection="tournament")
         uda = sga(gen=1, cr=.90, eta_c=1., m=0.02, param_m=1., param_s=2, crossover="exponential",
                   mutation="polynomial", selection="tournament", seed=32)
-        self.assertEqual(uda.get_seed(), 32)
-        seed = uda.get_seed()
-
-
-class nsga2_test_case(_ut.TestCase):
-    """Test case for the UDA nsga2
-
-    """
-
-    def runTest(self):
-        from .core import nsga2
-        uda = nsga2()
-        uda = nsga2(gen=1, cr=0.95, eta_c=10, m=0.01, eta_m=10)
-        uda = nsga2(gen=1, cr=0.95, eta_c=10, m=0.01,
-                    eta_m=10, int_dim=0, seed=32)
         self.assertEqual(uda.get_seed(), 32)
         seed = uda.get_seed()
 
@@ -931,46 +1093,215 @@ class minlp_rastrigin_test_case(_ut.TestCase):
         self.assertTrue(int(pop.get_x()[0][1]) != pop.get_x()[0][1])
 
 
-class random_decision_vector_test_case(_ut.TestCase):
-    """Test case for random_decision_vector
+class wfg_test_case(_ut.TestCase):
+    """Test case for the UDP wfg
 
     """
 
     def runTest(self):
-        from .core import random_decision_vector, set_global_rng_seed
+        from .core import wfg, problem, population
+        udp = wfg(prob_id=1, dim_dvs=5, dim_obj=3, dim_k=4)
+        prob = problem(udp)
+        pop = population(udp, 20)
+        self.assertTrue(prob.get_nx() == 5)
+        self.assertTrue(prob.get_nobj() == 3)
+
+
+class thread_island_torture_test_case(_ut.TestCase):
+    """Stress test for thread_island
+
+    """
+
+    def runTest(self):
+        from .core import thread_island, population, algorithm, island
+        from . import evolve_status
+
+        pop = population(prob=_prob(), size=5)
+        algo = algorithm()
+        udi = thread_island()
+
+        for i in range(50):
+            l = []
+            for _ in range(100):
+                l.append(island(udi=udi, pop=pop, algo=algo))
+                l[-1].evolve()
+                l[-1].get_algorithm()
+                l[-1].get_population()
+
+            for i in l:
+                i.get_algorithm()
+                i.get_population()
+                i.wait()
+                self.assertTrue(i.status == evolve_status.idle_error)
+
+        class my_algo(object):
+            def evolve(self, pop):
+                return pop
+
+        algo = algorithm(my_algo())
+
+        for i in range(50):
+            l = []
+            for _ in range(100):
+                l.append(island(udi=udi, pop=pop, algo=algo))
+                l[-1].evolve()
+                l[-1].get_algorithm()
+                l[-1].get_population()
+
+            for i in l:
+                i.get_algorithm()
+                i.get_population()
+                i.wait()
+                self.assertTrue(i.status == evolve_status.idle_error)
+
+
+class rastrigin_test_case(_ut.TestCase):
+    """Test case for the Rastrigin function
+
+    """
+
+    def runTest(self):
+        from .core import rastrigin, problem, population
+        from pickle import loads, dumps
+        udp = rastrigin(dim=5)
+        prob = problem(udp)
+        self.assertTrue(prob.get_nx() == 5)
+        self.assertTrue(prob.get_nix() == 0)
+        self.assertTrue(prob.get_ncx() == 5)
+        pop = population(udp, 1)
+        self.assertEqual(str(pop), str(loads(dumps(pop))))
+
+
+class random_decision_vector_test_case(_ut.TestCase):
+    """Test case for random_decision_vector().
+
+    """
+
+    def runTest(self):
+        from .core import random_decision_vector, set_global_rng_seed, problem
+
+        class prob(object):
+            def __init__(self, lb, ub, nix=0):
+                self.lb = lb
+                self.ub = ub
+                self.nix = nix
+
+            def fitness(self, x):
+                return [0]
+
+            def get_bounds(self):
+                return self.lb, self.ub
+
+            def get_nix(self):
+                return self.nix
+
         set_global_rng_seed(42)
-        x = random_decision_vector(lb=[1.1, 2.1, -3], ub=[2.1, 3.4, 5], nix=1)
+        x = random_decision_vector(prob=problem(
+            prob([1.1, 2.1, -3], [2.1, 3.4, 5], 1)))
         self.assertTrue(int(x[-1]) == x[-1])
         self.assertTrue(int(x[1]) != x[1])
+
         set_global_rng_seed(42)
-        y = random_decision_vector(lb=[1.1, 2.1, -3], ub=[2.1, 3.4, 5], nix=1)
+        y = random_decision_vector(
+            problem(prob(lb=[1.1, 2.1, -3], ub=[2.1, 3.4, 5], nix=1)))
         self.assertTrue((x == y).all())
+
+        self.assertTrue(random_decision_vector(
+            problem(prob(lb=[1.1], ub=[1.1])))[0] == 1.1)
+        self.assertTrue(random_decision_vector(
+            problem(prob(lb=[1], ub=[1], nix=1)))[0] == 1)
+        self.assertTrue(random_decision_vector(
+            problem(prob(lb=[0], ub=[3], nix=1)))[0] in [0, 1, 2, 3])
+
         nan = float("nan")
         inf = float("inf")
+
         self.assertRaises(
-            ValueError, lambda: random_decision_vector([1, 2], [0, 3]))
+            ValueError, lambda: random_decision_vector(problem(prob([0, 0], [1, inf]))))
         self.assertRaises(
-            ValueError, lambda: random_decision_vector([1, -inf], [0, 32]))
+            ValueError, lambda: random_decision_vector(problem(prob([0, -inf], [1, 0]))))
         self.assertRaises(
-            ValueError, lambda: random_decision_vector([1, 2, 3], [0, 3]))
+            ValueError, lambda: random_decision_vector(problem(prob([0, -inf], [1, inf]))))
         self.assertRaises(
-            ValueError, lambda: random_decision_vector([0, 2, 3], [1, 4, nan]))
+            ValueError, lambda: random_decision_vector(problem(prob([0, 0], [1, nan]))))
         self.assertRaises(
-            ValueError, lambda: random_decision_vector([0, 2, nan], [1, 4, 4]))
-        self.assertRaises(ValueError, lambda: random_decision_vector(
-            [0, nan, 3], [1, nan, 4]))
-        self.assertRaises(ValueError, lambda: random_decision_vector(
-            [0, 2, 3], [1, 4, 5], 4))
-        self.assertRaises(ValueError, lambda: random_decision_vector(
-            [0, 2, 3.1], [1, 4, 5], 1))
-        self.assertRaises(ValueError, lambda: random_decision_vector(
-            [0, 2, 3], [1, 4, 5.2], 1))
-        self.assertRaises(ValueError, lambda: random_decision_vector(
-            [0, -1.1, 3], [1, 2, 5], 2))
-        self.assertRaises(ValueError, lambda: random_decision_vector(
-            [0, -1.1, -inf], [1, 2, inf], 2))
-        self.assertRaises(ValueError, lambda: random_decision_vector(
-            [0, -1.1, inf], [1, 2, inf], 2))
+            ValueError, lambda: random_decision_vector(problem(prob([0, -nan], [1, 0]))))
+        self.assertRaises(
+            ValueError, lambda: random_decision_vector(problem(prob([0, -nan], [1, nan]))))
+        self.assertRaises(
+            ValueError, lambda: random_decision_vector(problem(prob([0, 0], [1, 1E100], 1))))
+        self.assertRaises(
+            ValueError, lambda: random_decision_vector(problem(prob([0, -1E100], [1, 0], 1))))
+        self.assertRaises(
+            ValueError, lambda: random_decision_vector(problem(prob([0, -1E100], [1, 1E100], 1))))
+
+
+class batch_random_decision_vector_test_case(_ut.TestCase):
+    """Test case for batch_random_decision_vector().
+
+    """
+
+    def runTest(self):
+        from .core import batch_random_decision_vector as brdv, set_global_rng_seed, problem
+        import numpy as np
+
+        class prob(object):
+            def __init__(self, lb, ub, nix=0):
+                self.lb = lb
+                self.ub = ub
+                self.nix = nix
+
+            def fitness(self, x):
+                return [0]
+
+            def get_bounds(self):
+                return self.lb, self.ub
+
+            def get_nix(self):
+                return self.nix
+
+        set_global_rng_seed(42)
+        x = brdv(
+            problem(prob([1.1, 2.1, -3], [2.1, 3.4, 5], 1)), 10).reshape(10, 3)
+        np.all([_ >= 1.1 and _ < 2.1 for _ in x[:, 0]])
+        np.all([_ >= 2.1 and _ < 3.4 for _ in x[:, 1]])
+        np.all([_ in range(-3, 6) for _ in x[:, 2]])
+
+        x2 = brdv(prob=problem(prob([1.1, 2.1, -3], [2.1, 3.4, 5], 1)), n=0)
+        self.assertTrue(x2.shape == (0,))
+
+        set_global_rng_seed(42)
+        y = brdv(
+            problem(prob([1.1, 2.1, -3], [2.1, 3.4, 5], 1)), 10).reshape(10, 3)
+        self.assertTrue(np.all(x == y))
+
+        x = brdv(problem(prob([1.1], [1.1])), 10)
+        self.assertTrue(np.all(x == 1.1))
+
+        x = brdv(problem(prob([-1], [-1], 1)), 10)
+        self.assertTrue(np.all(x == -1))
+
+        nan = float("nan")
+        inf = float("inf")
+
+        self.assertRaises(
+            ValueError, lambda: brdv(problem(prob([0, 0], [1, inf])), 1))
+        self.assertRaises(
+            ValueError, lambda: brdv(problem(prob([0, -inf], [1, 0])), 1))
+        self.assertRaises(
+            ValueError, lambda: brdv(problem(prob([0, -inf], [1, inf])), 1))
+        self.assertRaises(
+            ValueError, lambda: brdv(problem(prob([0, 0], [1, nan])), 1))
+        self.assertRaises(
+            ValueError, lambda: brdv(problem(prob([0, -nan], [1, 0])), 1))
+        self.assertRaises(
+            ValueError, lambda: brdv(problem(prob([0, -nan], [1, nan])), 1))
+        self.assertRaises(
+            ValueError, lambda: brdv(problem(prob([0, 0], [1, 1E100], 1)), 1))
+        self.assertRaises(
+            ValueError, lambda: brdv(problem(prob([0, -1E100], [1, 0], 1)), 1))
+        self.assertRaises(
+            ValueError, lambda: brdv(problem(prob([0, -1E100], [1, 1E100], 1)), 1))
 
 
 class luksan_vlcek1_test_case(_ut.TestCase):
@@ -1495,12 +1826,27 @@ class archipelago_test_case(_ut.TestCase):
         self.run_pickle_tests()
         self.run_champions_tests()
         self.run_status_tests()
+        self.run_mig_log_db_tests()
+        self.run_get_set_topo_tests()
+        self.run_mt_mh_tests()
         if self._level > 0:
             self.run_torture_test_0()
-            self.run_torture_test_1()
+            # NOTE: skip this test for the time being.
+            # It was copy-pasted from an interactive
+            # python session ages ago, and it's not clear
+            # whether we can control its internal randomness
+            # or not, with the result that it seems to
+            # fail rarely (in the sense that it won't
+            # raise an expected exception, not that it crashes
+            # or anything like that). We'll have to
+            # investigate further if we ever want to
+            # turn it back on.
+            # self.run_torture_test_1()
+            self.run_migration_torture_test()
 
     def run_init_tests(self):
-        from . import archipelago, de, rosenbrock, population, null_problem, thread_island, mp_island
+        from . import (archipelago, de, rosenbrock, population, null_problem, thread_island,
+                       mp_island, topology, unconnected, ring, r_policy, s_policy, fair_replace, select_best)
         a = archipelago()
         self.assertEqual(len(a), 0)
         self.assertRaises(IndexError, lambda: a[0])
@@ -1566,6 +1912,89 @@ class archipelago_test_case(_ut.TestCase):
         self.assertEqual(len(seeds), len(set(seeds)))
         self.assertRaises(KeyError, lambda: archipelago(
             5, pop=population(), algo=de(), seed=1))
+
+        # Constructors from topology and custom r_pol, s_pol.
+        a = archipelago(5, t=topology(), algo=de(), prob=rosenbrock(),
+                        pop_size=10, udi=mp_island(), seed=5)
+        self.assertTrue(a.get_topology().is_(unconnected))
+        self.assertTrue(
+            all([isl.get_r_policy().is_(fair_replace) for isl in a]))
+        self.assertTrue(
+            all([isl.get_s_policy().is_(select_best) for isl in a]))
+
+        a = archipelago(5, t=topology(ring()), algo=de(), prob=rosenbrock(),
+                        pop_size=10, udi=mp_island(), seed=5)
+        self.assertTrue(a.get_topology().is_(ring))
+
+        a = archipelago(5, t=ring(), algo=de(), prob=rosenbrock(),
+                        pop_size=10, udi=mp_island(), seed=5)
+        self.assertTrue(a.get_topology().is_(ring))
+
+        a = archipelago(5, t=ring(), algo=de(), prob=rosenbrock(),
+                        pop_size=10, udi=mp_island(), seed=5, r_pol=r_policy())
+        self.assertTrue(
+            all([isl.get_r_policy().is_(fair_replace) for isl in a]))
+        self.assertTrue(
+            all([isl.get_s_policy().is_(select_best) for isl in a]))
+
+        a = archipelago(5, t=ring(), algo=de(), prob=rosenbrock(),
+                        pop_size=10, udi=mp_island(), seed=5, r_pol=r_policy(), s_pol=s_policy())
+        self.assertTrue(
+            all([isl.get_r_policy().is_(fair_replace) for isl in a]))
+        self.assertTrue(
+            all([isl.get_s_policy().is_(select_best) for isl in a]))
+
+        a = archipelago(5, t=ring(), algo=de(), prob=rosenbrock(),
+                        pop_size=10, udi=mp_island(), seed=5, r_pol=_r_pol(), s_pol=_s_pol())
+        self.assertTrue(all([isl.get_r_policy().is_(_r_pol) for isl in a]))
+        self.assertTrue(all([isl.get_s_policy().is_(_s_pol) for isl in a]))
+
+    def run_mig_log_db_tests(self):
+        from . import archipelago, de, rosenbrock, ring
+        a = archipelago(5, t=ring(), algo=de(), prob=rosenbrock(), pop_size=10)
+        a.evolve(10)
+        a.wait_check()
+
+        db = a.get_migrants_db()
+        self.assertEqual(len(db), 5)
+        for g in db:
+            self.assertEqual(len(g), 3)
+            self.assertEqual(len(g[0]), 1)
+            self.assertEqual(g[1].shape, (1, 2))
+            self.assertEqual(g[2].shape, (1, 1))
+
+        log = a.get_migration_log()
+        for e in log:
+            self.assertEqual(len(e), 6)
+            self.assertEqual(e[2].shape, (2,))
+            self.assertEqual(e[3].shape, (1,))
+            self.assertTrue(e[4] < 5)
+            self.assertTrue(e[5] < 5)
+
+    def run_get_set_topo_tests(self):
+        from . import archipelago, de, rosenbrock, ring, topology, fully_connected
+        a = archipelago(5, t=ring(), algo=de(), prob=rosenbrock(), pop_size=10)
+        self.assertTrue(a.get_topology().is_(ring))
+
+        # Evolve, then set topology (will trigger wait()).
+        a.evolve(100)
+        a.set_topology(topology(fully_connected(5)))
+        self.assertTrue(a.get_topology().is_(fully_connected))
+        a.set_topology(ring(5))
+        self.assertTrue(a.get_topology().is_(ring))
+
+    def run_mt_mh_tests(self):
+        from . import archipelago, de, rosenbrock, migration_type, ring, migrant_handling
+
+        a = archipelago(5, t=ring(), algo=de(), prob=rosenbrock(), pop_size=10)
+        self.assertEqual(a.get_migration_type(), migration_type.p2p)
+        self.assertEqual(a.get_migrant_handling(), migrant_handling.preserve)
+        a.evolve(100)
+        a.set_migration_type(migration_type.broadcast)
+        self.assertEqual(a.get_migration_type(), migration_type.broadcast)
+        a.set_migrant_handling(migrant_handling.evict)
+        self.assertEqual(a.get_migrant_handling(), migrant_handling.evict)
+        a.wait_check()
 
     def run_evolve_tests(self):
         from . import archipelago, de, rosenbrock, mp_island, evolve_status
@@ -1646,7 +2075,8 @@ class archipelago_test_case(_ut.TestCase):
         del i0, i1, i2, i3
 
     def run_push_back_tests(self):
-        from . import archipelago, de, rosenbrock
+        from . import (archipelago, de, rosenbrock, r_policy,
+                       s_policy, fair_replace, select_best)
         a = archipelago(5, algo=de(), prob=rosenbrock(), pop_size=10)
         # Push back while evolving.
         a.evolve(10)
@@ -1676,13 +2106,37 @@ class archipelago_test_case(_ut.TestCase):
             self.assertTrue(a[i].get_population().problem.is_(rosenbrock))
             self.assertEqual(len(a[i].get_population()), 11)
 
+        # Push back with custom policies.
+        a = archipelago(5, algo=de(), prob=rosenbrock(), pop_size=10)
+        self.assertTrue(
+            all([isl.get_r_policy().is_(fair_replace) for isl in a]))
+        self.assertTrue(
+            all([isl.get_s_policy().is_(select_best) for isl in a]))
+
+        a.push_back(algo=de(), prob=rosenbrock(), size=11, r_pol=r_policy())
+        a.push_back(algo=de(), prob=rosenbrock(), size=11,
+                    r_pol=r_policy(), s_pol=s_policy())
+        self.assertTrue(
+            all([isl.get_r_policy().is_(fair_replace) for isl in a]))
+        self.assertTrue(
+            all([isl.get_s_policy().is_(select_best) for isl in a]))
+
+        a.push_back(algo=de(), prob=rosenbrock(), size=11,
+                    r_pol=_r_pol(), s_pol=_s_pol())
+        a.push_back(algo=de(), prob=rosenbrock(), size=11,
+                    r_pol=_r_pol(), s_pol=_s_pol())
+        self.assertTrue(all([a[i].get_r_policy().is_(_r_pol)
+                             for i in range(7, 9)]))
+        self.assertTrue(all([a[i].get_s_policy().is_(_s_pol)
+                             for i in range(7, 9)]))
+
     def run_io_tests(self):
         from . import archipelago, de, rosenbrock
         a = archipelago(5, algo=de(), prob=rosenbrock(), pop_size=10)
         self.assertFalse(repr(a) == "")
 
     def run_pickle_tests(self):
-        from . import archipelago, de, rosenbrock, mp_island
+        from . import archipelago, de, rosenbrock, mp_island, ring, migration_type, migrant_handling
         from pickle import dumps, loads
         import sys
         import os
@@ -1694,6 +2148,18 @@ class archipelago_test_case(_ut.TestCase):
         a = archipelago(5, algo=de(), prob=_prob(),
                         pop_size=10, udi=mp_island())
         self.assertEqual(repr(a), repr(loads(dumps(a))))
+
+        # Test also with custom topology, mh and mt.
+        a = archipelago(n=5, t=ring(), algo=de(),
+                        prob=rosenbrock(), pop_size=10)
+        a.set_migration_type(migration_type.broadcast)
+        a.set_migrant_handling(migrant_handling.evict)
+        self.assertEqual(repr(a), repr(loads(dumps(a))))
+        self.assertTrue(loads(dumps(a)).get_topology().is_(ring))
+        self.assertEqual(loads(dumps(a)).get_migration_type(),
+                         migration_type.broadcast)
+        self.assertEqual(loads(dumps(a)).get_migrant_handling(),
+                         migrant_handling.evict)
 
     def run_champions_tests(self):
         from . import archipelago, de, rosenbrock, zdt
@@ -1775,6 +2241,273 @@ class archipelago_test_case(_ut.TestCase):
             500), prob=ackley(50), pop_size=50)
         archi.evolve()
 
+    def run_migration_torture_test(self):
+        from . import archipelago, de, rosenbrock, fair_replace, select_best, r_policy, s_policy
+        import threading
+
+        # Use custom UDT, UDRP and UDSP for the torture test.
+
+        # NOTE: re-implementation of a fully_connected
+        # topology.
+        class udt(object):
+            def __init__(self, n=0):
+                self._n = n
+                self._lock = threading.Lock()
+
+            def get_n(self):
+                with self._lock:
+                    n = self._n
+                return n
+
+            def __copy__(self):
+                return udt(self.get_n())
+
+            def __deepcopy__(self, d):
+                return self.__copy__()
+
+            def push_back(self):
+                with self._lock:
+                    self._n = self._n + 1
+
+            def get_connections(self, i):
+                with self._lock:
+                    n = self._n
+                return (list(range(0, i)) + list(range(i+1, n)), [1.]*(n-1))
+
+        # NOTE: these two will just re-use fair_replace/select_best internally.
+        class udrp(object):
+
+            def replace(self, inds, nx, nix, nobj, nec, nic, tol, mig):
+                return r_policy(fair_replace()).replace(inds, nx, nix, nobj, nec, nic, tol, mig)
+
+        class udsp(object):
+
+            def select(self, inds, nx, nix, nobj, nec, nic, tol):
+                return s_policy(select_best()).select(inds, nx, nix, nobj, nec, nic, tol)
+
+        archi = archipelago(n=100, t=udt(), algo=de(
+            1), prob=rosenbrock(), pop_size=10, seed=32, r_pol=udrp(), s_pol=udsp())
+
+        archi.evolve(100)
+        archi.wait_check()
+
+
+class unconnected_test_case(_ut.TestCase):
+    """Test case for the unconnected UDT
+
+    """
+
+    def runTest(self):
+        from .core import unconnected, topology
+        udt = unconnected()
+        topo = topology(udt=udt)
+        self.assertTrue(len(topo.get_connections(100)[0]) == 0)
+        self.assertTrue(len(topo.get_connections(100)[1]) == 0)
+        topo.push_back()
+        topo.push_back()
+        topo.push_back()
+        self.assertTrue(len(topo.get_connections(100)[0]) == 0)
+        self.assertTrue(len(topo.get_connections(100)[1]) == 0)
+        self.assertEqual(topo.get_name(), "Unconnected")
+
+
+class fair_replace_test_case(_ut.TestCase):
+    """Test case for the fair replace UDRP
+
+    """
+
+    def runTest(self):
+        from .core import fair_replace, r_policy
+        udrp = fair_replace()
+        r_pol = r_policy(udrp=udrp)
+        self.assertEqual(r_pol.get_name(), "Fair replace")
+        self.assertTrue("Absolute migration rate: 1" in repr(r_pol))
+        r_pol = r_policy(udrp=fair_replace(rate=0))
+        self.assertTrue("Absolute migration rate: 0" in repr(r_pol))
+        r_pol = r_policy(udrp=fair_replace(2))
+        self.assertTrue("Absolute migration rate: 2" in repr(r_pol))
+        r_pol = r_policy(udrp=fair_replace(rate=.5))
+        self.assertTrue("Fractional migration rate: 0.5" in repr(r_pol))
+
+        with self.assertRaises(ValueError) as cm:
+            r_policy(udrp=fair_replace(-1.2))
+        err = cm.exception
+        self.assertTrue(
+            "Invalid fractional migration rate " in str(err))
+
+        with self.assertRaises(TypeError) as cm:
+            r_policy(udrp=fair_replace(rate="dsadasdas"))
+        err = cm.exception
+        self.assertTrue(
+            "the migration rate must be an integral or floating-point value" in str(err))
+
+
+class select_best_test_case(_ut.TestCase):
+    """Test case for the select best UDSP
+
+    """
+
+    def runTest(self):
+        from .core import select_best, s_policy
+        udsp = select_best()
+        s_pol = s_policy(udsp=udsp)
+        self.assertEqual(s_pol.get_name(), "Select best")
+        self.assertTrue("Absolute migration rate: 1" in repr(s_pol))
+        s_pol = s_policy(udsp=select_best(rate=0))
+        self.assertTrue("Absolute migration rate: 0" in repr(s_pol))
+        s_pol = s_policy(udsp=select_best(2))
+        self.assertTrue("Absolute migration rate: 2" in repr(s_pol))
+        s_pol = s_policy(udsp=select_best(rate=.5))
+        self.assertTrue("Fractional migration rate: 0.5" in repr(s_pol))
+
+        with self.assertRaises(ValueError) as cm:
+            s_policy(udsp=select_best(-1.2))
+        err = cm.exception
+        self.assertTrue(
+            "Invalid fractional migration rate " in str(err))
+
+        with self.assertRaises(TypeError) as cm:
+            s_policy(udsp=select_best(rate="dsadasdas"))
+        err = cm.exception
+        self.assertTrue(
+            "the migration rate must be an integral or floating-point value" in str(err))
+
+
+class ring_test_case(_ut.TestCase):
+    """Test case for the ring UDT
+
+    """
+
+    def runTest(self):
+        from .core import ring, topology
+
+        udt = ring()
+        self.assertTrue(udt.num_vertices() == 0)
+        self.assertTrue(udt.get_weight() == 1.)
+
+        udt = ring(w=.5)
+        self.assertTrue(udt.num_vertices() == 0)
+        self.assertTrue(udt.get_weight() == .5)
+
+        udt = ring(n=10, w=.1)
+        self.assertTrue(udt.num_vertices() == 10)
+        self.assertTrue(udt.get_weight() == .1)
+
+        with self.assertRaises(ValueError) as cm:
+            ring(n=10, w=2.)
+        err = cm.exception
+        self.assertTrue(
+            "invalid weight for the edge of a topology: the value " in str(err))
+
+        with self.assertRaises(OverflowError) as cm:
+            ring(n=-10, w=.5)
+
+        udt = ring(n=5)
+        self.assertTrue(udt.are_adjacent(4, 0))
+        self.assertTrue(udt.are_adjacent(0, 4))
+        self.assertTrue(not udt.are_adjacent(4, 1))
+        self.assertTrue(not udt.are_adjacent(1, 4))
+        udt.add_edge(1, 4)
+        self.assertTrue(not udt.are_adjacent(4, 1))
+        self.assertTrue(udt.are_adjacent(1, 4))
+        udt.remove_edge(1, 4)
+        self.assertTrue(not udt.are_adjacent(1, 4))
+        udt.add_vertex()
+        self.assertTrue(not udt.are_adjacent(5, 1))
+        self.assertTrue(not udt.are_adjacent(1, 5))
+        self.assertEqual(udt.num_vertices(), 6)
+        udt.set_weight(0, 4, .5)
+        self.assertTrue("0.5" in repr(topology(udt)))
+        udt.set_all_weights(0.25)
+        self.assertTrue("0.25" in repr(topology(udt)))
+        self.assertEqual(topology(udt).get_name(), "Ring")
+
+        with self.assertRaises(ValueError) as cm:
+            udt.are_adjacent(100, 101)
+        err = cm.exception
+        self.assertTrue(
+            "invalid vertex index in a BGL topology: the index is 100, but the number of vertices is only 6" in str(err))
+
+        with self.assertRaises(OverflowError) as cm:
+            udt.are_adjacent(-1, -1)
+
+        with self.assertRaises(ValueError) as cm:
+            udt.add_edge(100, 101)
+        err = cm.exception
+        self.assertTrue(
+            "invalid vertex index in a BGL topology: the index is 100, but the number of vertices is only 6" in str(err))
+
+        with self.assertRaises(OverflowError) as cm:
+            udt.add_edge(-1, -1)
+
+        with self.assertRaises(ValueError) as cm:
+            udt.add_edge(1, 4, -1.)
+
+        with self.assertRaises(ValueError) as cm:
+            udt.remove_edge(100, 101)
+        err = cm.exception
+        self.assertTrue(
+            "invalid vertex index in a BGL topology: the index is 100, but the number of vertices is only 6" in str(err))
+
+        with self.assertRaises(OverflowError) as cm:
+            udt.remove_edge(-1, -1)
+
+        with self.assertRaises(ValueError) as cm:
+            udt.set_weight(100, 101, .5)
+        err = cm.exception
+        self.assertTrue(
+            "invalid vertex index in a BGL topology: the index is 100, but the number of vertices is only 6" in str(err))
+
+        with self.assertRaises(OverflowError) as cm:
+            udt.set_weight(-1, -1, .5)
+
+        with self.assertRaises(ValueError) as cm:
+            udt.set_weight(2, 3, -.5)
+
+        with self.assertRaises(ValueError) as cm:
+            udt.set_all_weights(-.5)
+
+        topo = topology(udt=ring(3))
+        self.assertTrue(len(topo.get_connections(0)[0]) == 2)
+        self.assertTrue(len(topo.get_connections(0)[1]) == 2)
+        topo.push_back()
+        topo.push_back()
+        topo.push_back()
+        self.assertTrue(len(topo.get_connections(3)[0]) == 2)
+        self.assertTrue(len(topo.get_connections(3)[1]) == 2)
+        self.assertEqual(topo.get_name(), "Ring")
+
+
+class fully_connected_test_case(_ut.TestCase):
+    """Test case for the fully_connected UDT
+
+    """
+
+    def runTest(self):
+        from .core import fully_connected, topology
+
+        udt = fully_connected()
+        self.assertEqual(udt.num_vertices(), 0)
+        self.assertEqual(udt.get_weight(), 1.)
+
+        udt = fully_connected(w=.5)
+        self.assertEqual(udt.num_vertices(), 0)
+        self.assertEqual(udt.get_weight(), .5)
+
+        udt = fully_connected(w=.5, n=10)
+        self.assertEqual(udt.num_vertices(), 10)
+        self.assertEqual(udt.get_weight(), .5)
+
+        topo = topology(udt=fully_connected(10))
+        self.assertTrue(len(topo.get_connections(1)[0]) == 9)
+        self.assertTrue(len(topo.get_connections(1)[1]) == 9)
+        topo.push_back()
+        topo.push_back()
+        topo.push_back()
+        self.assertTrue(len(topo.get_connections(5)[0]) == 12)
+        self.assertTrue(len(topo.get_connections(5)[1]) == 12)
+        self.assertEqual(topo.get_name(), "Fully connected")
+
 
 def run_test_suite(level=0):
     """Run the full test suite.
@@ -1785,7 +2518,7 @@ def run_test_suite(level=0):
         level(``int``): the test level (higher values run longer tests)
 
     """
-    from . import _problem_test, _algorithm_test, _island_test, set_global_rng_seed
+    from . import _problem_test, _algorithm_test, _island_test, _topology_test, _r_policy_test, _s_policy_test, set_global_rng_seed
 
     # Make test runs deterministic.
     # NOTE: we'll need to place the async/migration tests at the end, so that at
@@ -1794,12 +2527,29 @@ def run_test_suite(level=0):
 
     retval = 0
     suite = _ut.TestLoader().loadTestsFromTestCase(core_test_case)
+    suite.addTest(archipelago_test_case(level))
+    suite.addTest(_island_test.island_test_case())
+    suite.addTest(_s_policy_test.s_policy_test_case())
+    suite.addTest(_r_policy_test.r_policy_test_case())
+    suite.addTest(_topology_test.topology_test_case())
+    suite.addTest(fair_replace_test_case())
+    suite.addTest(select_best_test_case())
+    suite.addTest(unconnected_test_case())
+    suite.addTest(ring_test_case())
+    suite.addTest(fully_connected_test_case())
+    suite.addTest(thread_island_torture_test_case())
     suite.addTest(_problem_test.problem_test_case())
     suite.addTest(_algorithm_test.algorithm_test_case())
-    suite.addTest(_island_test.island_test_case())
     suite.addTest(_island_test.mp_island_test_case(level))
     suite.addTest(_island_test.ipyparallel_island_test_case(level))
+    suite.addTest(golomb_ruler_test_case())
+    suite.addTest(lennard_jones_test_case())
     suite.addTest(de_test_case())
+    suite.addTest(nsga2_test_case())
+    suite.addTest(gaco_test_case())
+    suite.addTest(gwo_test_case())
+    suite.addTest(de1220_test_case())
+    suite.addTest(sea_test_case())
     suite.addTest(pso_test_case())
     suite.addTest(pso_gen_test_case())
     suite.addTest(bee_colony_test_case())
@@ -1809,7 +2559,6 @@ def run_test_suite(level=0):
     suite.addTest(sga_test_case())
     suite.addTest(ihs_test_case())
     suite.addTest(population_test_case())
-    suite.addTest(archipelago_test_case(level))
     suite.addTest(null_problem_test_case())
     suite.addTest(hypervolume_test_case())
     suite.addTest(mo_utils_test_case())
@@ -1818,6 +2567,7 @@ def run_test_suite(level=0):
     suite.addTest(estimate_sparsity_test_case())
     suite.addTest(estimate_gradient_test_case())
     suite.addTest(random_decision_vector_test_case())
+    suite.addTest(batch_random_decision_vector_test_case())
     try:
         from .core import cmaes
         suite.addTest(cmaes_test_case())
@@ -1835,12 +2585,14 @@ def run_test_suite(level=0):
     suite.addTest(cec2014_test_case())
     suite.addTest(luksan_vlcek1_test_case())
     suite.addTest(minlp_rastrigin_test_case())
+    suite.addTest(rastrigin_test_case())
     suite.addTest(translate_test_case())
     suite.addTest(decompose_test_case())
     suite.addTest(unconstrain_test_case())
     suite.addTest(mbh_test_case())
     suite.addTest(cstrs_self_adaptive_test_case())
     suite.addTest(decorator_problem_test_case())
+    suite.addTest(wfg_test_case())
     try:
         from .core import nlopt
         suite.addTest(nlopt_test_case())

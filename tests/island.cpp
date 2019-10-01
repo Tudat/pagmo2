@@ -27,11 +27,12 @@ GNU Lesser General Public License along with the PaGMO library.  If not,
 see https://www.gnu.org/licenses/. */
 
 #define BOOST_TEST_MODULE island_test
-#include <boost/test/included/unit_test.hpp>
+//#define BOOST_TEST_DYN_LINK
+#include <boost/test/unit_test.hpp>
 
 #include <atomic>
-#include <boost/lexical_cast.hpp>
 #include <initializer_list>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -40,14 +41,26 @@ see https://www.gnu.org/licenses/. */
 #include <utility>
 #include <vector>
 
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/lexical_cast.hpp>
+
 #include <pagmo/algorithms/de.hpp>
+#include <pagmo/algorithms/null_algorithm.hpp>
+#include <pagmo/batch_evaluators/thread_bfe.hpp>
+#include <pagmo/bfe.hpp>
 #include <pagmo/config.hpp>
 #include <pagmo/io.hpp>
 #include <pagmo/island.hpp>
+#include <pagmo/islands/thread_island.hpp>
 #include <pagmo/population.hpp>
 #include <pagmo/problem.hpp>
+#include <pagmo/problems/null_problem.hpp>
 #include <pagmo/problems/rosenbrock.hpp>
-#include <pagmo/serialization.hpp>
+#include <pagmo/r_policies/fair_replace.hpp>
+#include <pagmo/r_policy.hpp>
+#include <pagmo/s11n.hpp>
+#include <pagmo/s_policies/select_best.hpp>
+#include <pagmo/s_policy.hpp>
 #include <pagmo/threading.hpp>
 #include <pagmo/types.hpp>
 
@@ -86,75 +99,189 @@ BOOST_AUTO_TEST_CASE(island_type_traits)
     BOOST_CHECK(is_udi<udi_03>::value);
 }
 
+// Minimal udrp/udsp to test the constructors
+// with policies arguments.
+
+struct udrp00 {
+    individuals_group_t replace(const individuals_group_t &, const vector_double::size_type &,
+                                const vector_double::size_type &, const vector_double::size_type &,
+                                const vector_double::size_type &, const vector_double::size_type &,
+                                const vector_double &, const individuals_group_t &) const
+    {
+        return individuals_group_t{};
+    }
+    template <typename Archive>
+    void serialize(Archive &, unsigned)
+    {
+    }
+};
+
+PAGMO_S11N_R_POLICY_EXPORT(udrp00)
+
+struct udsp00 {
+    individuals_group_t select(const individuals_group_t &, const vector_double::size_type &,
+                               const vector_double::size_type &, const vector_double::size_type &,
+                               const vector_double::size_type &, const vector_double::size_type &,
+                               const vector_double &) const
+    {
+        return individuals_group_t{};
+    }
+    template <typename Archive>
+    void serialize(Archive &, unsigned)
+    {
+    }
+};
+
+PAGMO_S11N_S_POLICY_EXPORT(udsp00)
+
 BOOST_AUTO_TEST_CASE(island_constructors)
 {
     // Various constructors.
     island isl;
     BOOST_CHECK(isl.get_algorithm().is<null_algorithm>());
     BOOST_CHECK(isl.get_population().get_problem().is<null_problem>());
+    BOOST_CHECK(isl.get_r_policy().is<fair_replace>());
+    BOOST_CHECK(isl.get_s_policy().is<select_best>());
     BOOST_CHECK(isl.get_population().size() == 0u);
-    auto isl2 = isl;
+    auto isl2(isl);
     BOOST_CHECK(isl2.get_algorithm().is<null_algorithm>());
     BOOST_CHECK(isl2.get_population().get_problem().is<null_problem>());
     BOOST_CHECK(isl2.get_population().size() == 0u);
+    BOOST_CHECK(isl2.get_r_policy().is<fair_replace>());
+    BOOST_CHECK(isl2.get_s_policy().is<select_best>());
     island isl3{de{}, population{rosenbrock{}, 25}};
     BOOST_CHECK(isl3.get_algorithm().is<de>());
     BOOST_CHECK(isl3.get_population().get_problem().is<rosenbrock>());
     BOOST_CHECK(isl3.get_population().size() == 25u);
-    auto isl4 = isl3;
+    BOOST_CHECK(isl3.get_r_policy().is<fair_replace>());
+    BOOST_CHECK(isl3.get_s_policy().is<select_best>());
+    auto isl4(isl3);
     BOOST_CHECK(isl4.get_algorithm().is<de>());
     BOOST_CHECK(isl4.get_population().get_problem().is<rosenbrock>());
     BOOST_CHECK(isl4.get_population().size() == 25u);
+    BOOST_CHECK(isl4.get_r_policy().is<fair_replace>());
+    BOOST_CHECK(isl4.get_s_policy().is<select_best>());
+    // Ctor from algo, pop, policies.
+    island isl4a{de{}, population{rosenbrock{}, 25}, udrp00{}, udsp00{}};
+    BOOST_CHECK(isl4a.get_algorithm().is<de>());
+    BOOST_CHECK(isl4a.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl4a.get_population().size() == 25u);
+    BOOST_CHECK(isl4a.get_r_policy().is<udrp00>());
+    BOOST_CHECK(isl4a.get_s_policy().is<udsp00>());
+    auto isl4b(isl4a);
+    BOOST_CHECK(isl4b.get_algorithm().is<de>());
+    BOOST_CHECK(isl4b.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl4b.get_population().size() == 25u);
+    BOOST_CHECK(isl4b.get_r_policy().is<udrp00>());
+    BOOST_CHECK(isl4b.get_s_policy().is<udsp00>());
+    // Ctor from UDI, algo, pop.
     island isl5{thread_island{}, de{}, population{rosenbrock{}, 26}};
     BOOST_CHECK(isl5.get_algorithm().is<de>());
     BOOST_CHECK(isl5.get_population().get_problem().is<rosenbrock>());
     BOOST_CHECK(isl5.get_population().size() == 26u);
+    BOOST_CHECK(isl5.get_r_policy().is<fair_replace>());
+    BOOST_CHECK(isl5.get_s_policy().is<select_best>());
+    // Ctor from UDI, algo, pop and policies.
+    island isl5a{thread_island{}, de{}, population{rosenbrock{}, 26}, udrp00{}, udsp00{}};
+    BOOST_CHECK(isl5a.get_algorithm().is<de>());
+    BOOST_CHECK(isl5a.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl5a.get_population().size() == 26u);
+    BOOST_CHECK(isl5a.get_r_policy().is<udrp00>());
+    BOOST_CHECK(isl5a.get_s_policy().is<udsp00>());
+    // Ctor form algo, prob, size and seed.
     island isl6{de{}, rosenbrock{}, 27};
     BOOST_CHECK(isl6.get_algorithm().is<de>());
     BOOST_CHECK(isl6.get_population().get_problem().is<rosenbrock>());
     BOOST_CHECK(isl6.get_population().size() == 27u);
+    BOOST_CHECK(isl6.get_r_policy().is<fair_replace>());
+    BOOST_CHECK(isl6.get_s_policy().is<select_best>());
     island isl7{de{}, rosenbrock{}, 27, 123};
     BOOST_CHECK(isl7.get_algorithm().is<de>());
     BOOST_CHECK(isl7.get_population().get_problem().is<rosenbrock>());
     BOOST_CHECK(isl7.get_population().size() == 27u);
     BOOST_CHECK(isl7.get_population().get_seed() == 123u);
+    BOOST_CHECK(isl7.get_r_policy().is<fair_replace>());
+    BOOST_CHECK(isl7.get_s_policy().is<select_best>());
+    // Ctor form algo, prob, size, policies and seed.
+    island isl6a{de{}, rosenbrock{}, 27, udrp00{}, udsp00{}};
+    BOOST_CHECK(isl6a.get_algorithm().is<de>());
+    BOOST_CHECK(isl6a.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl6a.get_population().size() == 27u);
+    BOOST_CHECK(isl6a.get_r_policy().is<udrp00>());
+    BOOST_CHECK(isl6a.get_s_policy().is<udsp00>());
+    island isl7a{de{}, rosenbrock{}, 27, udrp00{}, udsp00{}, 123};
+    BOOST_CHECK(isl7a.get_algorithm().is<de>());
+    BOOST_CHECK(isl7a.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl7a.get_population().size() == 27u);
+    BOOST_CHECK(isl7a.get_population().get_seed() == 123u);
+    BOOST_CHECK(isl7a.get_r_policy().is<udrp00>());
+    BOOST_CHECK(isl7a.get_s_policy().is<udsp00>());
+    // Ctor from UDI, algo, prob and size.
     island isl8{thread_island{}, de{}, rosenbrock{}, 28};
     BOOST_CHECK(isl8.get_algorithm().is<de>());
     BOOST_CHECK(isl8.get_population().get_problem().is<rosenbrock>());
     BOOST_CHECK(isl8.get_population().size() == 28u);
+    BOOST_CHECK(isl8.get_r_policy().is<fair_replace>());
+    BOOST_CHECK(isl8.get_s_policy().is<select_best>());
     island isl9{thread_island{}, de{}, rosenbrock{}, 29, 124};
     BOOST_CHECK(isl9.get_algorithm().is<de>());
     BOOST_CHECK(isl9.get_population().get_problem().is<rosenbrock>());
     BOOST_CHECK(isl9.get_population().size() == 29u);
     BOOST_CHECK(isl9.get_population().get_seed() == 124u);
-    island isl10{std::move(isl9)};
+    BOOST_CHECK(isl9.get_r_policy().is<fair_replace>());
+    BOOST_CHECK(isl9.get_s_policy().is<select_best>());
+    // Ctor from UDI, algo, prob, size and policies.
+    island isl8a{thread_island{}, de{}, rosenbrock{}, 28, udrp00{}, udsp00{}};
+    BOOST_CHECK(isl8a.get_algorithm().is<de>());
+    BOOST_CHECK(isl8a.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl8a.get_population().size() == 28u);
+    BOOST_CHECK(isl8a.get_r_policy().is<udrp00>());
+    BOOST_CHECK(isl8a.get_s_policy().is<udsp00>());
+    island isl9a{thread_island{}, de{}, rosenbrock{}, 29, udrp00{}, udsp00{}, 124};
+    BOOST_CHECK(isl9a.get_algorithm().is<de>());
+    BOOST_CHECK(isl9a.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl9a.get_population().size() == 29u);
+    BOOST_CHECK(isl9a.get_population().get_seed() == 124u);
+    BOOST_CHECK(isl9a.get_r_policy().is<udrp00>());
+    BOOST_CHECK(isl9a.get_s_policy().is<udsp00>());
+    island isl10{std::move(isl9a)};
     BOOST_CHECK(isl10.get_algorithm().is<de>());
     BOOST_CHECK(isl10.get_population().get_problem().is<rosenbrock>());
     BOOST_CHECK(isl10.get_population().size() == 29u);
     BOOST_CHECK(isl10.get_population().get_seed() == 124u);
-    // Revive isl9;
-    isl9 = island{thread_island{}, de{}, rosenbrock{}, 29, 124};
-    BOOST_CHECK(isl9.get_algorithm().is<de>());
-    BOOST_CHECK(isl9.get_population().get_problem().is<rosenbrock>());
-    BOOST_CHECK(isl9.get_population().size() == 29u);
-    BOOST_CHECK(isl9.get_population().get_seed() == 124u);
+    BOOST_CHECK(isl10.get_r_policy().is<udrp00>());
+    BOOST_CHECK(isl10.get_s_policy().is<udsp00>());
+    // Revive isl9a;
+    isl9a = island{thread_island{}, de{}, rosenbrock{}, 29, 124};
+    BOOST_CHECK(isl9a.get_algorithm().is<de>());
+    BOOST_CHECK(isl9a.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl9a.get_population().size() == 29u);
+    BOOST_CHECK(isl9a.get_population().get_seed() == 124u);
+    BOOST_CHECK(isl9a.get_r_policy().is<fair_replace>());
+    BOOST_CHECK(isl9a.get_s_policy().is<select_best>());
     // Copy assignment.
-    isl9 = isl8;
-    BOOST_CHECK(isl9.get_algorithm().is<de>());
-    BOOST_CHECK(isl9.get_population().get_problem().is<rosenbrock>());
-    BOOST_CHECK(isl9.get_population().size() == 28u);
+    isl9a = isl8a;
+    BOOST_CHECK(isl9a.get_algorithm().is<de>());
+    BOOST_CHECK(isl9a.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl9a.get_population().size() == 28u);
+    BOOST_CHECK(isl9a.get_r_policy().is<udrp00>());
+    BOOST_CHECK(isl9a.get_s_policy().is<udsp00>());
     // Self assignment.
-    BOOST_CHECK((std::is_same<island &, decltype(isl9 = isl9)>::value));
-    isl9 = isl9;
-    BOOST_CHECK(isl9.get_algorithm().is<de>());
-    BOOST_CHECK(isl9.get_population().get_problem().is<rosenbrock>());
-    BOOST_CHECK(isl9.get_population().size() == 28u);
+    BOOST_CHECK((std::is_same<island &, decltype(isl9a = isl9a)>::value));
+    isl9a = *&isl9a;
+    BOOST_CHECK(isl9a.get_algorithm().is<de>());
+    BOOST_CHECK(isl9a.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl9a.get_population().size() == 28u);
+    BOOST_CHECK(isl9a.get_r_policy().is<udrp00>());
+    BOOST_CHECK(isl9a.get_s_policy().is<udsp00>());
 #if !defined(__clang__)
-    BOOST_CHECK((std::is_same<island &, decltype(isl9 = std::move(isl9))>::value));
-    isl9 = std::move(isl9);
-    BOOST_CHECK(isl9.get_algorithm().is<de>());
-    BOOST_CHECK(isl9.get_population().get_problem().is<rosenbrock>());
-    BOOST_CHECK(isl9.get_population().size() == 28u);
+    BOOST_CHECK((std::is_same<island &, decltype(isl9a = std::move(isl9a))>::value));
+    isl9a = std::move(isl9a);
+    BOOST_CHECK(isl9a.get_algorithm().is<de>());
+    BOOST_CHECK(isl9a.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl9a.get_population().size() == 28u);
+    BOOST_CHECK(isl9a.get_r_policy().is<udrp00>());
+    BOOST_CHECK(isl9a.get_s_policy().is<udsp00>());
 #endif
     // Some type-traits.
     BOOST_CHECK((std::is_constructible<island, de, population>::value));
@@ -249,66 +376,6 @@ BOOST_AUTO_TEST_CASE(island_get_wait_busy)
     isl.wait();
 }
 
-#if !defined(PAGMO_WITH_FORK_ISLAND)
-
-struct prob_02 {
-    vector_double fitness(const vector_double &) const
-    {
-        return {.5};
-    }
-    std::pair<vector_double, vector_double> get_bounds() const
-    {
-        return {{0.}, {1.}};
-    }
-    thread_safety get_thread_safety() const
-    {
-        return thread_safety::none;
-    }
-};
-
-struct algo_01 {
-    population evolve(const population &pop) const
-    {
-        return pop;
-    }
-    thread_safety get_thread_safety() const
-    {
-        return thread_safety::none;
-    }
-};
-
-BOOST_AUTO_TEST_CASE(island_thread_safety)
-{
-    island isl{de{}, population{rosenbrock{}, 25}};
-    auto ts = isl.get_thread_safety();
-    BOOST_CHECK(ts[0] == thread_safety::basic);
-    BOOST_CHECK(ts[1] == thread_safety::basic);
-    isl.evolve();
-    isl.wait_check();
-    isl = island{de{}, population{prob_02{}, 25}};
-    ts = isl.get_thread_safety();
-    BOOST_CHECK(ts[0] == thread_safety::basic);
-    BOOST_CHECK(ts[1] == thread_safety::none);
-    isl.evolve();
-    isl.wait();
-    BOOST_CHECK_THROW(isl.wait_check(), std::invalid_argument);
-    isl = island{algo_01{}, population{rosenbrock{}, 25}};
-    ts = isl.get_thread_safety();
-    BOOST_CHECK(ts[0] == thread_safety::none);
-    BOOST_CHECK(ts[1] == thread_safety::basic);
-    isl.evolve();
-    isl.wait();
-    BOOST_CHECK_THROW(isl.wait_check(), std::invalid_argument);
-    isl = island{algo_01{}, population{prob_02{}, 25}};
-    ts = isl.get_thread_safety();
-    BOOST_CHECK(ts[0] == thread_safety::none);
-    BOOST_CHECK(ts[1] == thread_safety::none);
-    isl.evolve();
-    BOOST_CHECK_THROW(isl.wait_check(), std::invalid_argument);
-}
-
-#endif
-
 BOOST_AUTO_TEST_CASE(island_name_info_stream)
 {
     std::ostringstream oss;
@@ -323,24 +390,27 @@ BOOST_AUTO_TEST_CASE(island_name_info_stream)
     BOOST_CHECK(!oss.str().empty());
     BOOST_CHECK(isl.get_name() == "udi_01");
     BOOST_CHECK(isl.get_extra_info() == "extra bits");
+    BOOST_CHECK(boost::contains(oss.str(), "Replacement policy: Fair replace"));
+    BOOST_CHECK(boost::contains(oss.str(), "Selection policy: Select best"));
+    std::cout << isl << '\n';
 }
 
 BOOST_AUTO_TEST_CASE(island_serialization)
 {
-    island isl{de{}, population{rosenbrock{}, 25}};
+    island isl{de{}, population{rosenbrock{}, 25}, udrp00{}, udsp00{}};
     isl.evolve();
     isl.wait_check();
     std::stringstream ss;
     auto before = boost::lexical_cast<std::string>(isl);
     // Now serialize, deserialize and compare the result.
     {
-        cereal::JSONOutputArchive oarchive(ss);
-        oarchive(isl);
+        boost::archive::binary_oarchive oarchive(ss);
+        oarchive << isl;
     }
     isl = island{de{}, population{rosenbrock{}, 25}};
     {
-        cereal::JSONInputArchive iarchive(ss);
-        iarchive(isl);
+        boost::archive::binary_iarchive iarchive(ss);
+        iarchive >> isl;
     }
     auto after = boost::lexical_cast<std::string>(isl);
     BOOST_CHECK_EQUAL(before, after);
@@ -448,4 +518,98 @@ BOOST_AUTO_TEST_CASE(island_extract)
     BOOST_CHECK((std::is_same<udi_01 const *, decltype(static_cast<const island &>(isl).extract<udi_01>())>::value));
     BOOST_CHECK(isl.is<udi_01>());
     BOOST_CHECK(isl.extract<const udi_01>() == nullptr);
+}
+
+// Constructors with bfe arguments.
+BOOST_AUTO_TEST_CASE(island_bfe_ctors)
+{
+    island isl00{stateful_algo{}, rosenbrock{10}, bfe{}, 1000};
+    BOOST_CHECK(isl00.get_algorithm().is<stateful_algo>());
+    BOOST_CHECK(isl00.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl00.get_population().size() == 1000u);
+    BOOST_CHECK(isl00.get_r_policy().is<fair_replace>());
+    BOOST_CHECK(isl00.get_s_policy().is<select_best>());
+    auto pop = isl00.get_population();
+    BOOST_CHECK(pop.get_problem().get_fevals() == 1000u);
+    for (auto i = 0u; i < 1000u; ++i) {
+        BOOST_CHECK(pop.get_f()[i] == pop.get_problem().fitness(pop.get_x()[i]));
+    }
+
+    // Try also with a udbfe.
+    isl00 = island{stateful_algo{}, rosenbrock{10}, thread_bfe{}, 1000};
+    BOOST_CHECK(isl00.get_algorithm().is<stateful_algo>());
+    BOOST_CHECK(isl00.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl00.get_population().size() == 1000u);
+    BOOST_CHECK(isl00.get_r_policy().is<fair_replace>());
+    BOOST_CHECK(isl00.get_s_policy().is<select_best>());
+    pop = isl00.get_population();
+    BOOST_CHECK(pop.get_problem().get_fevals() == 1000u);
+    for (auto i = 0u; i < 1000u; ++i) {
+        BOOST_CHECK(pop.get_f()[i] == pop.get_problem().fitness(pop.get_x()[i]));
+    }
+
+    // With policies.
+    isl00 = island{stateful_algo{}, rosenbrock{10}, thread_bfe{}, 1000, udrp00{}, udsp00{}};
+    BOOST_CHECK(isl00.get_algorithm().is<stateful_algo>());
+    BOOST_CHECK(isl00.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl00.get_population().size() == 1000u);
+    BOOST_CHECK(isl00.get_r_policy().is<udrp00>());
+    BOOST_CHECK(isl00.get_s_policy().is<udsp00>());
+    pop = isl00.get_population();
+    BOOST_CHECK(pop.get_problem().get_fevals() == 1000u);
+    for (auto i = 0u; i < 1000u; ++i) {
+        BOOST_CHECK(pop.get_f()[i] == pop.get_problem().fitness(pop.get_x()[i]));
+    }
+
+    isl00 = island{thread_island{}, stateful_algo{}, rosenbrock{10}, bfe{}, 1000};
+    BOOST_CHECK(isl00.get_algorithm().is<stateful_algo>());
+    BOOST_CHECK(isl00.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl00.get_population().size() == 1000u);
+    BOOST_CHECK(isl00.get_r_policy().is<fair_replace>());
+    BOOST_CHECK(isl00.get_s_policy().is<select_best>());
+    pop = isl00.get_population();
+    BOOST_CHECK(pop.get_problem().get_fevals() == 1000u);
+    for (auto i = 0u; i < 1000u; ++i) {
+        BOOST_CHECK(pop.get_f()[i] == pop.get_problem().fitness(pop.get_x()[i]));
+    }
+
+    // Try also with a udbfe.
+    isl00 = island{thread_island{}, stateful_algo{}, rosenbrock{10}, thread_bfe{}, 1000};
+    BOOST_CHECK(isl00.get_algorithm().is<stateful_algo>());
+    BOOST_CHECK(isl00.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl00.get_population().size() == 1000u);
+    BOOST_CHECK(isl00.get_r_policy().is<fair_replace>());
+    BOOST_CHECK(isl00.get_s_policy().is<select_best>());
+    pop = isl00.get_population();
+    BOOST_CHECK(pop.get_problem().get_fevals() == 1000u);
+    for (auto i = 0u; i < 1000u; ++i) {
+        BOOST_CHECK(pop.get_f()[i] == pop.get_problem().fitness(pop.get_x()[i]));
+    }
+
+    // With policies.
+    isl00 = island{thread_island{}, stateful_algo{}, rosenbrock{10}, thread_bfe{}, 1000, udrp00{}, udsp00{}};
+    BOOST_CHECK(isl00.get_algorithm().is<stateful_algo>());
+    BOOST_CHECK(isl00.get_population().get_problem().is<rosenbrock>());
+    BOOST_CHECK(isl00.get_population().size() == 1000u);
+    BOOST_CHECK(isl00.get_r_policy().is<udrp00>());
+    BOOST_CHECK(isl00.get_s_policy().is<udsp00>());
+    pop = isl00.get_population();
+    BOOST_CHECK(pop.get_problem().get_fevals() == 1000u);
+    for (auto i = 0u; i < 1000u; ++i) {
+        BOOST_CHECK(pop.get_f()[i] == pop.get_problem().fitness(pop.get_x()[i]));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(is_valid)
+{
+    island p0;
+    BOOST_CHECK(p0.is_valid());
+    island p1(std::move(p0));
+    BOOST_CHECK(!p0.is_valid());
+    p0 = island{udi_01{}, de{}, population{rosenbrock{}, 25}};
+    BOOST_CHECK(p0.is_valid());
+    p1 = std::move(p0);
+    BOOST_CHECK(!p0.is_valid());
+    p0 = island{udi_01{}, de{}, population{rosenbrock{}, 25}};
+    BOOST_CHECK(p0.is_valid());
 }

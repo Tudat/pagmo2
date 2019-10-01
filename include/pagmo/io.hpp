@@ -32,7 +32,6 @@ see https://www.gnu.org/licenses/. */
 #include <algorithm>
 #include <initializer_list>
 #include <iostream>
-#include <iterator>
 #include <map>
 #include <sstream>
 #include <stdexcept>
@@ -40,9 +39,8 @@ see https://www.gnu.org/licenses/. */
 #include <utility>
 #include <vector>
 
+#include <pagmo/detail/visibility.hpp>
 #include <pagmo/exceptions.hpp>
-
-#define PAGMO_MAX_OUTPUT_LENGTH 5u
 
 namespace pagmo
 {
@@ -75,26 +73,61 @@ inline void stream_impl(std::ostream &os, const bool &b)
     }
 }
 
+// Maximum number of elements printed for a container
+// (vector, map, etc.).
+constexpr unsigned max_stream_output_length()
+{
+    return 5u;
+}
+
+// Helper to stream a [begin, end) range.
+template <typename It>
+inline void stream_range(std::ostream &os, It begin, It end)
+{
+    // Special-case an empty range.
+    if (begin == end) {
+        os << "[]";
+        return;
+    }
+
+    os << '[';
+
+    for (auto counter = 0u;; ++counter) {
+        if (counter == max_stream_output_length()) {
+            // NOTE: if we are here, it means we have more
+            // elements in the range to print, but we already
+            // printed the maximum number of elements.
+            // Add the ellipsis and exit.
+            os << "... ";
+            break;
+        }
+
+        // Stream the current element of the range.
+        stream(os, *begin);
+
+        // NOTE: because we handled the empty range earlier,
+        // ++begin is always well-defined at the first iteration
+        // of this loop. Following iterations will happen only
+        // if begin != end.
+        if (++begin == end) {
+            // We printed the last element. Omit the comma,
+            // and exit.
+            break;
+        }
+
+        // We have more elements to print, or perhaps the
+        // ellipsis. Print comma and add space.
+        os << ", ";
+    }
+
+    os << ']';
+}
+
+// Implementation for vector.
 template <typename T>
 inline void stream_impl(std::ostream &os, const std::vector<T> &v)
 {
-    auto len = v.size();
-    if (len <= PAGMO_MAX_OUTPUT_LENGTH) {
-        os << '[';
-        for (decltype(v.size()) i = 0u; i < v.size(); ++i) {
-            stream(os, v[i]);
-            if (i != v.size() - 1u) {
-                os << ", ";
-            }
-        }
-        os << ']';
-    } else {
-        os << '[';
-        for (decltype(v.size()) i = 0u; i < PAGMO_MAX_OUTPUT_LENGTH; ++i) {
-            stream(os, v[i], ", ");
-        }
-        os << "... ]";
-    }
+    stream_range(os, v.begin(), v.end());
 }
 
 template <typename T, typename U>
@@ -109,7 +142,7 @@ inline void stream_impl(std::ostream &os, const std::map<T, U> &m)
     unsigned counter = 0;
     stream(os, '{');
     for (auto it = m.begin(); it != m.end(); ++counter) {
-        if (counter == PAGMO_MAX_OUTPUT_LENGTH) {
+        if (counter == max_stream_output_length()) {
             stream(os, "...");
             break;
         }
@@ -139,19 +172,11 @@ inline std::string to_string(const T &x)
 }
 
 // Gizmo to create simple ascii tables.
-class table
-{
+struct PAGMO_DLL_PUBLIC table {
     using s_size_t = std::string::size_type;
-
-public:
     // Construct from table headers, and optional indentation to be used when printing
     // the table.
-    table(std::vector<std::string> headers, std::string indent = "")
-        : m_indent(std::move(indent)), m_headers(std::move(headers))
-    {
-        std::transform(m_headers.begin(), m_headers.end(), std::back_inserter(m_sizes),
-                       [](const std::string &s) { return s.size(); });
-    }
+    table(std::vector<std::string> headers, std::string indent = "");
     // Add a row to the table. The input arguments are converted to string using to_string.
     // assembled in a row, and the row is then added to the table. The maximum column widths
     // are updated if elements in args require more width than currently allocated.
@@ -169,36 +194,15 @@ public:
         std::transform(m_rows.back().begin(), m_rows.back().end(), m_sizes.begin(), m_sizes.begin(),
                        [](const std::string &str, const s_size_t &size) { return (std::max)(str.size(), size); });
     }
-    // Print the table to stream.
-    friend std::ostream &operator<<(std::ostream &os, const table &t)
-    {
-        // Small helper functor to print a single row.
-        auto print_row = [&t, &os](const std::vector<std::string> &row) {
-            std::transform(row.begin(), row.end(), t.m_sizes.begin(), std::ostream_iterator<std::string>(os),
-                           [](const std::string &str, const s_size_t &size) {
-                               return str + std::string(size - str.size() + 2u, ' ');
-                           });
-        };
-        os << t.m_indent;
-        print_row(t.m_headers);
-        os << '\n' << t.m_indent;
-        std::transform(t.m_sizes.begin(), t.m_sizes.end(), std::ostream_iterator<std::string>(os),
-                       [](const s_size_t &size) { return std::string(size + 2u, '-'); });
-        os << '\n';
-        for (const auto &v : t.m_rows) {
-            os << t.m_indent;
-            print_row(v);
-            os << '\n';
-        }
-        return os;
-    }
 
-private:
     std::string m_indent;
     std::vector<std::string> m_headers;
     std::vector<s_size_t> m_sizes;
     std::vector<std::vector<std::string>> m_rows;
 };
+
+// Print the table to stream.
+PAGMO_DLL_PUBLIC std::ostream &operator<<(std::ostream &, const table &);
 
 } // end of namespace detail
 
@@ -228,7 +232,5 @@ inline void print(const Args &... args)
 }
 
 } // end of namespace pagmo
-
-#undef PAGMO_MAX_OUTPUT_LENGTH
 
 #endif

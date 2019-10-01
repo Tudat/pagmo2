@@ -26,13 +26,17 @@ You should have received copies of the GNU General Public License and the
 GNU Lesser General Public License along with the PaGMO library.  If not,
 see https://www.gnu.org/licenses/. */
 
-#define BOOST_TEST_MODULE cmaes_test
-#include <boost/lexical_cast.hpp>
-#include <boost/test/floating_point_comparison.hpp>
-#include <boost/test/included/unit_test.hpp>
+#define BOOST_TEST_MODULE xnes_test
+//#define BOOST_TEST_DYN_LINK
+#include <boost/test/unit_test.hpp>
+
+#include <initializer_list>
 #include <iostream>
 #include <limits> //  std::numeric_limits<double>::infinity();
 #include <string>
+
+#include <boost/lexical_cast.hpp>
+#include <boost/test/floating_point_comparison.hpp>
 
 #include <pagmo/algorithm.hpp>
 #include <pagmo/algorithms/xnes.hpp>
@@ -195,8 +199,8 @@ BOOST_AUTO_TEST_CASE(xnes_evolve_test)
     population pop_lb{problem{unbounded_lb{}}};
     population pop_ub{problem{unbounded_ub{}}};
     for (auto i = 0u; i < 20u; ++i) {
-        pop_lb.push_back(pagmo::random_decision_vector({0.}, {1.}, r_engine));
-        pop_ub.push_back(pagmo::random_decision_vector({0.}, {1.}, r_engine));
+        pop_lb.push_back(vector_double{pagmo::uniform_real_from_range(0., 1., r_engine)});
+        pop_ub.push_back(vector_double{pagmo::uniform_real_from_range(0., 1., r_engine)});
     }
     BOOST_CHECK_THROW(xnes{10u}.evolve(pop_lb), std::invalid_argument);
     BOOST_CHECK_THROW(xnes{10u}.evolve(pop_ub), std::invalid_argument);
@@ -238,19 +242,19 @@ BOOST_AUTO_TEST_CASE(xnes_serialization_test)
     auto before_log = algo.extract<xnes>()->get_log();
     // Now serialize, deserialize and compare the result.
     {
-        cereal::JSONOutputArchive oarchive(ss);
-        oarchive(algo);
+        boost::archive::binary_oarchive oarchive(ss);
+        oarchive << algo;
     }
     // Change the content of p before deserializing.
-    algo = algorithm{null_algorithm{}};
+    algo = algorithm{};
     {
-        cereal::JSONInputArchive iarchive(ss);
-        iarchive(algo);
+        boost::archive::binary_iarchive iarchive(ss);
+        iarchive >> algo;
     }
     auto after_text = boost::lexical_cast<std::string>(algo);
     auto after_log = algo.extract<xnes>()->get_log();
     BOOST_CHECK_EQUAL(before_text, after_text);
-    // BOOST_CHECK(before_log == after_log); // This fails because of floating point problems when using JSON and cereal
+    BOOST_CHECK(before_log == after_log);
     // so we implement a close check
     BOOST_CHECK(before_log.size() > 0u);
     for (auto i = 0u; i < before_log.size(); ++i) {
