@@ -137,16 +137,7 @@ if(PAGMO_BUILD_PAGMO)
 
     # NLopt
     if(PAGMO_WITH_NLOPT)
-        message(STATUS "Finding NLOPT")
-
-        #find_package(NLOPT REQUIRED)
-        set(NLOPT_LIBRARY "/home/dominic/Software/tudatBundleTest/tudatBundle/nlopt/lib/libnlopt.a")
-        set(NLOPT_INCLUDE_DIR "/home/dominic/Software/tudatBundleTest/tudatBundle/nlopt")
-
-        add_library(NLOPT::nlopt UNKNOWN IMPORTED)
-        set_target_properties(NLOPT::nlopt PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${NLOPT_INCLUDE_DIR}")
-        set_target_properties(NLOPT::nlopt PROPERTIES IMPORTED_LINK_INTERFACE_LANGUAGES "C" IMPORTED_LOCATION "${NLOPT_LIBRARY}")
-
+        find_package(NLOPT REQUIRED)
         message(STATUS "NLopt include directory: ${NLOPT_INCLUDE_DIR}")
         message(STATUS "NLopt library: ${NLOPT_LIBRARY}")
     endif()
@@ -345,11 +336,7 @@ if(PAGMO_BUILD_PAGMO)
 
     if(PAGMO_WITH_EIGEN3)
         # Link pagmo to eigen3.
-#<<<<<<< HEAD
-#        #target_link_libraries(pagmo INTERFACE Eigen3::eigen3)
-#=======
 #        target_link_libraries(pagmo PUBLIC Eigen3::eigen3)
-#>>>>>>> v2.11
         set(PAGMO_ENABLE_EIGEN3 "#define PAGMO_WITH_EIGEN3")
     endif()
 

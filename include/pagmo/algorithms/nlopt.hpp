@@ -111,14 +111,10 @@ namespace pagmo
  */
 // NOTE:
 // - investigate the use of a fitness cache, after we have good perf testing in place.
-//<<<<<<< HEAD
-//class   nlopt : public not_population_based
-//=======
 // - it looks like those lower_bound calls in the C objfun/constr computations related
 //   to the gradient sparsity pattern can be done once on construction, instead of
 //   repeatedly at every objfun.
 class PAGMO_DLL_PUBLIC nlopt : public not_population_based
-//>>>>>>> v2.11
 {
 public:
     /// Single data line for the algorithm's log.

@@ -102,20 +102,12 @@ BOOST_AUTO_TEST_CASE(cstrs_self_adaptive_construction)
     { // default constructor
         cstrs_self_adaptive udp;
         BOOST_CHECK(udp.get_inner_algorithm().extract<de>() != NULL);
-//<<<<<<< HEAD
-//        //BOOST_CHECK(udp.get_inner_algorithm().extract<cmaes>() == NULL);
-//=======
         BOOST_CHECK(udp.get_inner_algorithm().extract<compass_search>() == NULL);
-//>>>>>>> v2.11
     }
     { // constructor from iters
         BOOST_CHECK_NO_THROW((cstrs_self_adaptive{1500u}));
         BOOST_CHECK_NO_THROW((cstrs_self_adaptive{1500u, de{}}));
-//<<<<<<< HEAD
-//       // BOOST_CHECK_NO_THROW((cstrs_self_adaptive{1500u, cmaes{}, 32u}));
-//=======
         BOOST_CHECK_NO_THROW((cstrs_self_adaptive{1500u, de{}, 32u}));
-//>>>>>>> v2.11
     }
     // Here we only test that evolution is deterministic if the
     // seed is controlled
