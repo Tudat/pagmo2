@@ -327,6 +327,7 @@ BOOST_AUTO_TEST_CASE(archipelago_policy_constructors)
     std::sort(seeds.begin(), seeds.end());
     BOOST_CHECK(std::unique(seeds.begin(), seeds.end()) == seeds.end());
 
+#if PAGMO_USE_TBB
     // algo, prob, bfe, rpol, spol, no seed.
     archi = archipelago{5u, de{}, rosenbrock{}, bfe{}, 10u, udrp00{}, udsp00{}};
     BOOST_CHECK(archi.get_migration_type() == migration_type::p2p);
@@ -350,6 +351,7 @@ BOOST_AUTO_TEST_CASE(archipelago_policy_constructors)
     }
     std::sort(seeds.begin(), seeds.end());
     BOOST_CHECK(std::unique(seeds.begin(), seeds.end()) == seeds.end());
+#endif
 
     // isl, algo, prob, rpol, spol, no seed.
     archi = archipelago{5u, thread_island{}, de{}, rosenbrock{}, 10u, udrp00{}, udsp00{}};
@@ -376,6 +378,7 @@ BOOST_AUTO_TEST_CASE(archipelago_policy_constructors)
     std::sort(seeds.begin(), seeds.end());
     BOOST_CHECK(std::unique(seeds.begin(), seeds.end()) == seeds.end());
 
+#if PAGMO_USE_TBB
     // isl, algo, prob, bfe, rpol, spol, no seed.
     archi = archipelago{5u, thread_island{}, de{}, rosenbrock{}, bfe{}, 10u, udrp00{}, udsp00{}};
     BOOST_CHECK(archi.get_migration_type() == migration_type::p2p);
@@ -400,6 +403,7 @@ BOOST_AUTO_TEST_CASE(archipelago_policy_constructors)
     }
     std::sort(seeds.begin(), seeds.end());
     BOOST_CHECK(std::unique(seeds.begin(), seeds.end()) == seeds.end());
+#endif
 }
 
 BOOST_AUTO_TEST_CASE(archipelago_topology_constructors)
@@ -445,6 +449,7 @@ BOOST_AUTO_TEST_CASE(archipelago_topology_constructors)
     BOOST_CHECK(archi.get_migration_type() == migration_type::p2p);
     BOOST_CHECK(archi.get_migrant_handling() == migrant_handling::preserve);
 
+#if PAGMO_USE_TBB
     // Invoke one of the complicated ctors
     archi = archipelago{ring{}, 5u, thread_island{}, de{}, rosenbrock{}, bfe{}, 10u, udrp00{}, udsp00{}, 5};
     BOOST_CHECK(archi.size() == 5u);
@@ -463,6 +468,7 @@ BOOST_AUTO_TEST_CASE(archipelago_topology_constructors)
     }
     std::sort(seeds.begin(), seeds.end());
     BOOST_CHECK(std::unique(seeds.begin(), seeds.end()) == seeds.end());
+#endif
 }
 
 BOOST_AUTO_TEST_CASE(archipelago_push_back_migr)
@@ -796,6 +802,8 @@ BOOST_AUTO_TEST_CASE(archipelago_throw_on_ctor)
     BOOST_CHECK_THROW((archipelago{100u, de{}, pthrower_00{}, 1u}), std::invalid_argument);
 }
 
+#if PAGMO_USE_TBB
+
 BOOST_AUTO_TEST_CASE(archipelago_bfe_ctors)
 {
     archipelago archi00{100, de{}, rosenbrock{20}, bfe{}, 100u, 42u};
@@ -912,3 +920,4 @@ BOOST_AUTO_TEST_CASE(archipelago_bfe_ctors)
         }
     }
 }
+#endif

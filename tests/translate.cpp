@@ -232,6 +232,7 @@ struct udp_with_bfe {
     }
 };
 
+#if PAGMO_USE_TBB
 BOOST_AUTO_TEST_CASE(translate_batch_fitness_test)
 {
     problem p0{udp_with_bfe{}};
@@ -256,3 +257,4 @@ BOOST_AUTO_TEST_CASE(translate_batch_fitness_test)
     BOOST_CHECK(!no_bfe.has_batch_fitness());
     BOOST_CHECK_THROW(no_bfe.batch_fitness({3., 3., 3., 3.}), not_implemented_error);
 }
+#endif

@@ -34,8 +34,10 @@ see https://www.gnu.org/licenses/. */
 
 #include <boost/numeric/conversion/cast.hpp>
 
+#if PAGMO_USE_TBB
 #include <tbb/blocked_range.h>
 #include <tbb/parallel_for.h>
+#endif
 
 #include <pagmo/batch_evaluators/thread_bfe.hpp>
 #include <pagmo/bfe.hpp>
@@ -110,6 +112,7 @@ vector_double thread_bfe::operator()(const problem &p, const vector_double &dvs)
         }
     };
 
+#if PAGMO_USE_TBB
     using range_t = tbb::blocked_range<decltype(dvs.size())>;
     if (p.get_thread_safety() >= thread_safety::constant) {
         // We can concurrently call the objfun on the input prob, hence we can
@@ -130,6 +133,9 @@ vector_double thread_bfe::operator()(const problem &p, const vector_double &dvs)
         pagmo_throw(std::invalid_argument, "Cannot use a thread_bfe on the problem '" + p.get_name()
                                                + "', which does not provide the required level of thread safety");
     }
+#else
+    throw std::runtime_error( "TBB disabled in Pagmo; cannot call thread_bfe::operator()" );
+#endif
 
     return retval;
 }

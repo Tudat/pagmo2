@@ -393,6 +393,7 @@ BOOST_AUTO_TEST_CASE(population_cout_test)
     BOOST_CHECK_NO_THROW(std::cout << pop_mo);
 }
 
+#if PAGMO_USE_TBB
 BOOST_AUTO_TEST_CASE(population_bfe_ctor_test)
 {
     // Empty pop test. Use rosenbrock as we know
@@ -444,3 +445,4 @@ BOOST_AUTO_TEST_CASE(population_bfe_ctor_test)
     BOOST_CHECK(pop1000.champion_x() == pop1000a.champion_x());
     BOOST_CHECK(pop1000.champion_f() == pop1000a.champion_f());
 }
+#endif

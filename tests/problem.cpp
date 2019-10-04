@@ -1373,6 +1373,7 @@ struct bf_s11n {
 
 PAGMO_S11N_PROBLEM_EXPORT(bf_s11n)
 
+#if PAGMO_USE_TBB
 BOOST_AUTO_TEST_CASE(batch_fitness)
 {
     // Test a problem with no batch fitness.
@@ -1566,6 +1567,7 @@ BOOST_AUTO_TEST_CASE(batch_fitness)
     BOOST_CHECK_EQUAL(before, after);
     BOOST_CHECK(p.has_batch_fitness());
 }
+#endif
 
 BOOST_AUTO_TEST_CASE(is_valid)
 {

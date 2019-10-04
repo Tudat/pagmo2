@@ -334,6 +334,7 @@ BOOST_AUTO_TEST_CASE(integer_test_2)
     }
 }
 
+#if PAGMO_USE_TBB
 BOOST_AUTO_TEST_CASE(bfe_usage_test)
 {
     population pop{rosenbrock{10u}, 200u, 23u};
@@ -351,3 +352,4 @@ BOOST_AUTO_TEST_CASE(bfe_usage_test)
 
     BOOST_CHECK_EQUAL(pop.champion_f()[0], pop_2.champion_f()[0]);
 }
+#endif

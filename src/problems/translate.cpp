@@ -37,8 +37,10 @@ see https://www.gnu.org/licenses/. */
 #include <utility>
 #include <vector>
 
+#if PAGMO_USE_TBB
 #include <tbb/blocked_range.h>
 #include <tbb/parallel_for.h>
+#endif
 
 #include <pagmo/exceptions.hpp>
 #include <pagmo/io.hpp>
@@ -69,7 +71,7 @@ void translate::generic_ctor_impl(const vector_double &translation)
     if (translation.size() != m_problem.get_nx()) {
         pagmo_throw(std::invalid_argument,
                     "Length of shift vector is: " + std::to_string(translation.size())
-                        + " while the problem dimension is: " + std::to_string(m_problem.get_nx()));
+                    + " while the problem dimension is: " + std::to_string(m_problem.get_nx()));
     }
 }
 
@@ -111,6 +113,9 @@ vector_double translate::batch_fitness(const vector_double &xs) const
     // Prepare the deshifted dvs.
     vector_double xs_deshifted(xs.size());
 
+
+
+#if PAGMO_USE_TBB
     // Do the deshifting in parallel.
     using range_t = tbb::blocked_range<decltype(xs.size())>;
     tbb::parallel_for(range_t(0, n_dvs), [&xs, &xs_deshifted, nx, this](const range_t &range) {
@@ -121,11 +126,15 @@ vector_double translate::batch_fitness(const vector_double &xs) const
                            stdext::make_unchecked_array_iterator(m_translation.data()),
                            stdext::make_unchecked_array_iterator(xs_deshifted.data() + i * nx), std::minus<double>{});
 #else
-                std::transform(xs.data() + i * nx, xs.data() + (i + 1u) * nx, m_translation.data(),
-                               xs_deshifted.data() + i * nx, std::minus<double>{});
+            std::transform(xs.data() + i * nx, xs.data() + (i + 1u) * nx, m_translation.data(),
+                           xs_deshifted.data() + i * nx, std::minus<double>{});
 #endif
         }
     });
+#else
+    throw std::runtime_error( "TBB disabled in Pagmo; cannot call thread_bfe::operator()" );
+#endif
+
 
     // Invoke batch_fitness() from m_problem.
     // NOTE: in non-debug mode, use the helper that avoids calling the checks in m_problem.batch_fitness().

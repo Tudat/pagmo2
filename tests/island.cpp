@@ -520,6 +520,7 @@ BOOST_AUTO_TEST_CASE(island_extract)
     BOOST_CHECK(isl.extract<const udi_01>() == nullptr);
 }
 
+#if PAGMO_USE_TBB
 // Constructors with bfe arguments.
 BOOST_AUTO_TEST_CASE(island_bfe_ctors)
 {
@@ -599,6 +600,7 @@ BOOST_AUTO_TEST_CASE(island_bfe_ctors)
         BOOST_CHECK(pop.get_f()[i] == pop.get_problem().fitness(pop.get_x()[i]));
     }
 }
+#endif
 
 BOOST_AUTO_TEST_CASE(is_valid)
 {

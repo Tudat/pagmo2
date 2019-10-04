@@ -23,6 +23,13 @@ endif()
 # and only one must be chosen.
 option(PAGMO_BUILD_PAGMO "Build pagmo." ON)
 option(PAGMO_BUILD_PYGMO "Build pygmo." OFF)
+option(PAGMO_USE_TBB "Use TBB in pagmo." OFF)
+
+if(PAGMO_USE_TBB)
+  add_definitions(-DPAGMO_USE_TBB=1)
+else()
+  add_definitions(-DPAGMO_USE_TBB=0)
+endif()
 
 # Check consistency.
 if(PAGMO_BUILD_PAGMO AND PAGMO_BUILD_PYGMO)
@@ -98,21 +105,8 @@ endif()
 if(YACMA_COMPILER_IS_MSVC)
   # Disable the idiotic minmax macros on MSVC, some annoying warnings,
   # and enable the bigobj option.
-#<<<<<<< HEAD
-#  list(APPEND PAGMO_CXX_FLAGS_DEBUG "-DNOMINMAX" "/wd4459" "/wd4127" "/bigobj")
-#  list(APPEND PAGMO_CXX_FLAGS_RELEASE "-DNOMINMAX" "/wd4459" "/wd4127" "/bigobj")
-#endif()
-#if(YACMA_COMPILER_IS_INTELXX)
-#  # NOTE: on MSVC we use the push/pop pragmas, but they do not seem to work on Intel (the pragmas
-#  # in icc influence the behaviour at instantiation point, not at definition point).
-#  # These warnings are useful in principle, but they are generated a lot from cereal and we have no
-#  # way of disabling them selectively. Just rely on the other compilers to provde good diagnostic.
-#  list(APPEND PAGMO_CXX_FLAGS_DEBUG "-diag-disable" "2259,1682,68")
-#  list(APPEND PAGMO_CXX_FLAGS_RELEASE "-diag-disable" "2259,1682,68")
-#=======
   list(APPEND PAGMO_CXX_FLAGS_DEBUG "-DNOMINMAX" "/wd4459" "/wd4127" "/wd4702" "/wd4251" "/bigobj")
   list(APPEND PAGMO_CXX_FLAGS_RELEASE "-DNOMINMAX" "/wd4459" "/wd4127" "/wd4702" "/wd4251" "/bigobj")
-#>>>>>>> v2.11
 endif()
 if(MINGW)
 	# Flag needed to deal with big binaries in MinGW.
@@ -125,7 +119,9 @@ if(PAGMO_BUILD_PAGMO)
     # pagmo dependencies.
 
     # TBB.
-    find_package(TBB REQUIRED)
+    if(PAGMO_USE_TBB)
+        find_package(TBB REQUIRED)
+    endif()
 
     # Eigen3
     if(PAGMO_WITH_EIGEN3)
@@ -138,6 +134,8 @@ if(PAGMO_BUILD_PAGMO)
     # NLopt
     if(PAGMO_WITH_NLOPT)
         find_package(NLOPT REQUIRED)
+        include_directories(SYSTEM AFTER "${NLOPT_INCLUDE_DIR}")
+        include_directories(SYSTEM AFTER "${NLOPT_INCLUDE_DIR}/src/api")
         message(STATUS "NLopt include directory: ${NLOPT_INCLUDE_DIR}")
         message(STATUS "NLopt library: ${NLOPT_LIBRARY}")
     endif()
@@ -332,7 +330,9 @@ if(PAGMO_BUILD_PAGMO)
     target_link_libraries(pagmo PUBLIC Boost::boost Boost::serialization)
 
     # TBB.
-    target_link_libraries(pagmo PUBLIC TBB::tbb)
+    if(PAGMO_USE_TBB)
+        target_link_libraries(pagmo PUBLIC TBB::tbb)
+    endif()
 
     if(PAGMO_WITH_EIGEN3)
         # Link pagmo to eigen3.

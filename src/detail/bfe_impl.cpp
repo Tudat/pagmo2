@@ -30,8 +30,11 @@ see https://www.gnu.org/licenses/. */
 #include <stdexcept>
 #include <string>
 
+
+#if PAGMO_USE_TBB
 #include <tbb/blocked_range.h>
 #include <tbb/parallel_for.h>
+#endif
 
 #include <pagmo/detail/bfe_impl.hpp>
 #include <pagmo/exceptions.hpp>
@@ -61,16 +64,16 @@ void bfe_check_input_dvs(const problem &p, const vector_double &dvs)
                                                + ", is not an exact multiple of the dimension of the problem, "
                                                + std::to_string(n_dim));
     }
-    // Check all the decision vectors, using the same function employed
-    // in pagmo::problem for dv checking.
-    using range_t = tbb::blocked_range<decltype(dvs.size())>;
-    tbb::parallel_for(range_t(0, n_dvs), [&p, &dvs, n_dim](const range_t &range) {
-        for (auto i = range.begin(); i != range.end(); ++i) {
-            // NOTE: prob_check_dv only fetches cached data from p,
-            // and it is thus thread-safe.
-            prob_check_dv(p, dvs.data() + i * n_dim, n_dim);
-        }
-    });
+//    // Check all the decision vectors, using the same function employed
+//    // in pagmo::problem for dv checking.
+//    using range_t = tbb::blocked_range<decltype(dvs.size())>;
+//    tbb::parallel_for(range_t(0, n_dvs), [&p, &dvs, n_dim](const range_t &range) {
+//        for (auto i = range.begin(); i != range.end(); ++i) {
+//            // NOTE: prob_check_dv only fetches cached data from p,
+//            // and it is thus thread-safe.
+//            prob_check_dv(p, dvs.data() + i * n_dim, n_dim);
+//        }
+//    });
 }
 
 // Check the fitness vectors fvs produced by a bfe for problem p with input
@@ -102,6 +105,8 @@ void bfe_check_output_fvs(const problem &p, const vector_double &dvs, const vect
                 + std::to_string(n_fvs) + ", differs from the number of input decision vectors, "
                 + std::to_string(n_dvs));
     }
+
+#if PAGMO_USE_TBB
     // Check all the fitness vectors, using the same function employed
     // in pagmo::problem for fv checking.
     using range_t = tbb::blocked_range<decltype(fvs.size())>;
@@ -112,6 +117,10 @@ void bfe_check_output_fvs(const problem &p, const vector_double &dvs, const vect
             prob_check_fv(p, fvs.data() + i * f_dim, f_dim);
         }
     });
+#else
+    throw std::runtime_error( "TBB disabled in Pagmo; cannot call thread_bfe::operator()" );
+#endif
+
 }
 
 } // namespace detail
