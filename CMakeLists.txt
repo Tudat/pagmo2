@@ -302,7 +302,7 @@ if(PAGMO_BUILD_PAGMO)
     endif()
 
     # Setup of the pagmo library.
-    add_library(pagmo SHARED "${PAGMO_SRC_FILES}")
+    add_library(pagmo STATIC "${PAGMO_SRC_FILES}")
     set_property(TARGET pagmo PROPERTY VERSION "1.0")
     set_property(TARGET pagmo PROPERTY SOVERSION 1)
     target_compile_options(pagmo PRIVATE "$<$<CONFIG:DEBUG>:${PAGMO_CXX_FLAGS_DEBUG}>" "$<$<CONFIG:RELEASE>:${PAGMO_CXX_FLAGS_RELEASE}>")
