@@ -38,15 +38,21 @@ see https://www.gnu.org/licenses/. */
 // empty.
 #if defined(_WIN32) || defined(__CYGWIN__)
 
-#define pagmo_EXPORTS
-
 #if defined(pagmo_EXPORTS)
 
 #define PAGMO_DLL_PUBLIC __declspec(dllexport)
 
 #else
 
+#if defined(PAGMO_STATIC_LIB)
+
+#define PAGMO_DLL_PUBLIC
+
+#else
+
 #define PAGMO_DLL_PUBLIC __declspec(dllimport)
+
+#endif
 
 #endif
 
