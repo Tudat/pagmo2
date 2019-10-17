@@ -212,6 +212,7 @@ BOOST_AUTO_TEST_CASE(nspso_serialization_test)
     }
 }
 
+#if PAGMO_USE_TBB
 BOOST_AUTO_TEST_CASE(bfe_usage_test)
 {
     // 1 - Algorithm with bfe disabled
@@ -242,6 +243,7 @@ BOOST_AUTO_TEST_CASE(bfe_usage_test)
     pop2 = algo2.evolve(pop);
     BOOST_CHECK(algo1.extract<nspso>()->get_log() == algo2.extract<nspso>()->get_log());
 }
+#endif
 
 BOOST_AUTO_TEST_CASE(memory_test)
 {

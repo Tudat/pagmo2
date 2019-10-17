@@ -299,6 +299,7 @@ BOOST_AUTO_TEST_CASE(bug)
     pop1 = user_algo1.evolve(pop1);
 }
 
+#if PAGMO_USE_TBB
 BOOST_AUTO_TEST_CASE(bfe_usage_test_not_stoch)
 {
     population pop{rosenbrock{10u}, 30u, 23u};
@@ -334,3 +335,4 @@ BOOST_AUTO_TEST_CASE(bfe_usage_test_stoch)
 
     BOOST_CHECK(pop.get_f() == pop_2.get_f());
 }
+#endif
