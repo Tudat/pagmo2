@@ -1,6 +1,94 @@
 Changelog
 =========
 
+2.12 (unreleased)
+-----------------
+
+New
+~~~
+
+- The :cpp:class:`pagmo::pso_gen` algorithm can now use the
+  batch fitness evaluation scheme
+  (`#348 <https://github.com/esa/pagmo2/pull/348>`__).
+
+- Implement the NSPSO algorithm
+  (`#314 <https://github.com/esa/pagmo2/pull/314>`__).
+
+Fix
+~~~
+
+- Fix a missing ``inline`` and a few wrong include files in the
+  serialization header
+  (`#355 <https://github.com/esa/pagmo2/pull/355>`__).
+
+- Various build system/doc fixes
+  (`#350 <https://github.com/esa/pagmo2/pull/350>`__,
+  `#354 <https://github.com/esa/pagmo2/pull/354>`__).
+
+2.11.4 (2019-09-29)
+-------------------
+
+Fix
+~~~
+
+- Fix an indexing bug in the :cpp:class:`pagmo::pso_gen` algorithm
+  (`#349 <https://github.com/esa/pagmo2/pull/349>`__).
+
+- Fix various fitness comparisons when nan values are involved
+  (`#346 <https://github.com/esa/pagmo2/pull/346>`__,
+  `#347 <https://github.com/esa/pagmo2/pull/347>`__).
+
+2.11.3 (2019-09-09)
+-------------------
+
+New
+~~~
+
+- :func:`pygmo.archipelago.push_back()` now also accepts :class:`~pygmo.island`
+  objects as input arguments (`#342 <https://github.com/esa/pagmo2/pull/342>`__).
+
+Changes
+~~~~~~~
+
+- **BREAKING**: the machinery for the translation between C++ and Python
+  of vectors of unsigned integral types (e.g., sparsity patterns, individual
+  IDs, etc.) now requires that, on the Python side, NumPy arrays are created
+  with the appropriate unsigned integral dtype (e.g., ``uint64`` in most
+  cases). Previously, pagmo would accept also signed integral dtypes
+  (`#342 <https://github.com/esa/pagmo2/pull/342>`__).
+
+Fix
+~~~
+
+- Various improvements, fixes and cleanups in the translation of
+  C++ vectors to/from Python
+  (`#342 <https://github.com/esa/pagmo2/pull/342>`__).
+
+- Fix the printing of islands which contain MO problems
+  (`#342 <https://github.com/esa/pagmo2/pull/342>`__).
+
+- Various doc improvements and fixes (`#340 <https://github.com/esa/pagmo2/pull/340>`__).
+
+2.11.2 (2019-08-21)
+-------------------
+
+Fix
+~~~
+
+- Fix the MinGW pip builds (`#338 <https://github.com/esa/pagmo2/pull/338>`__).
+
+- Fix the default value for the NSGA2 ``eta_m`` parameter in the Python exposition (`#338 <https://github.com/esa/pagmo2/pull/338>`__).
+
+2.11.1 (2019-08-09)
+-------------------
+
+Fix
+~~~
+
+- Fix a migration issue when multi-objective problems are involved (`#334 <https://github.com/esa/pagmo2/pull/334>`__).
+
+- Various docstring fixes (`#334 <https://github.com/esa/pagmo2/pull/334>`__).
+
 2.11 (2019-08-07)
 -----------------
 
